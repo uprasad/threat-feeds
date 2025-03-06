@@ -1,0 +1,15 @@
+https://www.welivesecurity.com/en/rss/feed/
+https://abuse.ch/rss
+https://research.checkpoint.com/feed/
+https://news.sophos.com/en-us/feed/
+https://www.sentinelone.com/feed/
+https://unit42.paloaltonetworks.com/feed/
+https://www.crowdstrike.com/en-us/blog/feed
+https://www.cisa.gov/blog.xml
+https://www.cisa.gov/news.xml
+https://www.cisa.gov/cybersecurity-advisories/all.xml
+https://blog.talosintelligence.com/rss/
+https://isc.sans.edu/rssfeed_full.xml
+https://www.microsoft.com/en-us/security/blog/feed/
+https://feeds.feedburner.com/threatintelligence/pvexyqv7v0v
+https://www.securitymagazine.com/rss/15

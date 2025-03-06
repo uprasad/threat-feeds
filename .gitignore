@@ -2,3 +2,5 @@
 enterprise-attack.json
 sans-venv/**
 .stuff.txt
+pagedata/**
+reports.db

@@ -2,20 +2,20 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS report (
     id TEXT PRIMARY KEY,
-    publish_time DATETIME,
+    publish_time TIMESTAMP WITH TIME ZONE, -- epoch
     title TEXT UNIQUE,
-    summary TEXT UNIQUE,
-    upload_time DATETIME,
+    summary TEXT,
+    upload_time TIMESTAMP WITH TIME ZONE, -- epoch
     source TEXT,
-    ipv4s TEXT, -- csv list
-    ipv6s TEXT, -- csv list
-    urls TEXT, -- csv list
-    yara_rules TEXT, -- json list
-    cves TEXT, -- csv list
-    sha256s TEXT, -- csv list
-    md5s TEXT, -- csv list
-    sha1s TEXT, -- csv list
-    mitre TEXT, -- json
+    ipv4s TEXT[],
+    ipv6s TEXT[],
+    urls TEXT[],
+    yara_rules TEXT[],
+    cves TEXT[],
+    sha256s TEXT[],
+    md5s TEXT[],
+    sha1s TEXT[],
+    mitre JSON,
     report_type TEXT,
     web_url TEXT UNIQUE,
     report_data_url TEXT UNIQUE

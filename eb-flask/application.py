@@ -1,8 +1,11 @@
+import base64
 import boto3
 from botocore.exceptions import ClientError
-from flask import Flask
+from datetime import datetime
+from flask import Flask, request, jsonify
 import json
 import psycopg2 as pg
+import psycopg2.extras as pg_extras
 
 application = Flask(__name__)
 
@@ -37,13 +40,117 @@ def create_pg_conn():
     )
 
 @application.route("/")
-def hello_world():
+def hello():
+    return "<p>I'm a teapot</p>", 418
+
+@application.route("/v1/reports")
+def list_reports():
     try:
         pg_conn = create_pg_conn()
     except Exception as e:
-        return f"<p> Error connecting to database</p>"
+        return jsonify({"error": "error connecting to database"}), 503
 
-    return f"<p>Hello, {pg_conn.info.dbname}</p>"
+    title = request.args.get('title')
+    source = request.args.get('source')
+    published_after = request.args.get('published_after')
+    published_before = request.args.get('published_before')
+    page_token = request.args.get('page_token')
+    limit = request.args.get('limit', 10, type=int)
+
+    query = """
+        SELECT id, title, source, publish_time, web_url
+        FROM report
+        WHERE 1=1
+    """
+    params = []
+
+    if title:
+        query += " AND title ILIKE %s"
+        params.append(f'%{title}%')
+
+    if source:
+        query += " AND source ILIKE %s"
+        params.append(f'%{source}%')
+
+    if published_after:
+        try:
+            # Convert to datetime object if it's a timestamp string
+            if published_after.isdigit():
+                published_after = datetime.fromtimestamp(int(start_time))
+            query += " AND publish_time > %s"
+            params.append(published_after)
+        except (ValueError, TypeError):
+            return jsonify({"error": "invalid published_after format"}), 400
+
+    if published_before:
+        try:
+            # Convert to datetime object if it's a timestamp string
+            if published_before.isdigit():
+                published_before = datetime.fromtimestamp(int(published_before))
+            query += " AND publish_time < %s"
+            params.append(published_before)
+        except (ValueError, TypeError):
+            return jsonify({"error": "invalid published_before format"}), 400
+
+    # Handle pagination
+    if page_token:
+        try:
+            # Decode the page token
+            decoded_token = json.loads(base64.b64decode(page_token).decode('utf-8'))
+            last_publish_time = decoded_token.get('last_publish_time')
+            last_id = decoded_token.get('last_id')
+
+            if last_publish_time and last_id:
+                # Add condition to get records after the last seen record
+                query += """ AND (publish_time < %s
+                          OR (publish_time = %s AND id < %s))"""
+                params.extend([last_publish_time, last_publish_time, last_id])
+        except Exception:
+            return jsonify({"error": "invalid page token"}), 400
+
+    query += " ORDER BY publish_time DESC, id DESC LIMIT %s + 1"
+    params.append(limit)
+
+    results = []
+    try:
+        with pg_conn, pg_conn.cursor(cursor_factory=pg_extras.DictCursor) as pg_cur:
+            pg_cur.execute(query, params)
+            rows = pg_cur.fetchall()
+
+            has_more = len(rows) > limit
+            if has_more:
+                rows = rows[:-1]
+
+            for row in rows:
+                results.append({
+                    "id": row["id"],
+                    "title": row["title"],
+                    "publish_time": row["publish_time"].isoformat() if row["publish_time"] else None,
+                    "source": row["source"],
+                    "web_url": row["web_url"],
+                })
+
+            # Generate the next page token
+            next_page_token = None
+            if has_more and results:
+                last_result = results[-1]
+                token_data = {
+                    "last_publish_time": last_result["publish_time"],
+                    "last_id": last_result["id"]
+                }
+                next_page_token = base64.b64encode(json.dumps(token_data).encode('utf-8')).decode('utf-8')
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        pg_conn.close()
+
+    response = {
+        "reports": results,
+    }
+    if next_page_token:
+        response["next_page_token"] = next_page_token
+
+    return jsonify(response)
 
 if __name__ == '__main__':
     application.debug = True

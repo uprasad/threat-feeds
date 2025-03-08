@@ -152,6 +152,63 @@ def list_reports():
 
     return jsonify(response)
 
+@application.route("/v1/reports/<string:report_id>")
+def get_report(report_id):
+    try:
+        pg_conn = create_pg_conn()
+    except Exception as e:
+        return jsonify({"error": "error connecting to database"}), 503
+
+    query = """
+        SELECT
+            id,
+            publish_time,
+            title,
+            summary,
+            source,
+            ipv4s,
+            ipv6s,
+            urls,
+            yara_rules,
+            cves,
+            sha256s,
+            md5s,
+            sha1s,
+            mitre,
+            web_url
+        FROM report
+        WHERE id = %s
+    """
+    try:
+        with pg_conn, pg_conn.cursor(cursor_factory=pg_extras.DictCursor) as pg_cur:
+            pg_cur.execute(query, (report_id,))
+            row = pg_cur.fetchone()
+
+            if not row:
+                return jsonify({"error": "report not found"}), 404
+
+            result = dict(row)
+
+            if result["publish_time"] is not None:
+                result["publish_time"] = result["publish_time"].isoformat()
+
+            # Handle arrays - ensure they're returned as lists even if NULL in DB
+            array_fields = ["ipv4s", "ipv6s", "urls", "yara_rules", "cves", "sha256s", "md5s", "sha1s"]
+            for field in array_fields:
+                if result[field] is None:
+                    result[field] = []
+
+            # Handle the mitre JSON field - it's already loaded as a Python dict by psycopg2.extras.DictCursor
+            # but we need to ensure it's not None
+            if result["mitre"] is None:
+                result["mitre"] = {}
+
+            return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        pg_conn.close()
+
 if __name__ == '__main__':
     application.debug = True
     application.run()

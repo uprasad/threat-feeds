@@ -267,16 +267,17 @@ def search_reports():
                     "web_url": row["web_url"],
                 })
 
-                next_page_token = base64.b64encode(str(pagenum+1).encode()).decode()
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
         pg_conn.close()
 
+    next_page_token = base64.b64encode(str(pagenum+1).encode()).decode()
     response = {
         "reports": reports,
         "next_page_token": next_page_token,
     }
+
     return jsonify(response)
 
 if __name__ == '__main__':

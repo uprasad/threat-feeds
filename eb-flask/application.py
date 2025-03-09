@@ -6,6 +6,8 @@ from flask import Flask, request, jsonify
 import json
 import psycopg2 as pg
 import psycopg2.extras as pg_extras
+from whoosh import index
+from whoosh import qparser
 
 application = Flask(__name__)
 
@@ -208,6 +210,74 @@ def get_report(report_id):
         return jsonify({"error": str(e)}), 500
     finally:
         pg_conn.close()
+
+@application.route("/v1/reports/search")
+def search_reports():
+    try:
+        ix = index.open_dir("pageindex", indexname="report", readonly=True)
+    except:
+        return jsonify({"error": "error connecting to index"}), 503
+
+    try:
+        pg_conn = create_pg_conn()
+    except Exception as e:
+        return jsonify({"error": "error connecting to database"}), 503
+
+    query_str = request.args.get('q')
+    limit = request.args.get('limit', 10, type=int)
+    page_token = request.args.get('page_token')
+
+    if not query_str:
+        return jsonify({"error": "query field 'q' is required"}), 400
+
+    pagenum = 1
+    if page_token:
+        try:
+            pagenum = int(base64.b64decode(page_token))
+        except Exception:
+            return jsonify({"error": "invalid page token"}), 400
+
+    reports = []
+    try:
+        with ix.searcher() as searcher, pg_conn.cursor(cursor_factory=pg_extras.DictCursor) as pg_cur:
+            parser = qparser.MultifieldParser(["title", "content"],
+                                             ix.schema,
+                                             fieldboosts={"title": 2.0,
+                                                          "content": 1.0})
+            query = parser.parse(query_str)
+            results = searcher.search_page(query, pagenum, pagelen=limit)
+
+            for hit in results:
+                report_id = hit["id"]
+                pg_cur.execute("""
+                    SELECT id, title, source, publish_time, web_url
+                    FROM report
+                    WHERE id = %s
+                """, (report_id,))
+                row = pg_cur.fetchone()
+
+                if not row:
+                    return jsonify({"error": f"could not find record {report_id}"}), 503
+
+                reports.append({
+                    "id": row["id"],
+                    "title": row["title"],
+                    "publish_time": row["publish_time"].isoformat() if row["publish_time"] else None,
+                    "source": row["source"],
+                    "web_url": row["web_url"],
+                })
+
+                next_page_token = base64.b64encode(str(pagenum+1).encode()).decode()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        pg_conn.close()
+
+    response = {
+        "reports": reports,
+        "next_page_token": next_page_token,
+    }
+    return jsonify(response)
 
 if __name__ == '__main__':
     application.debug = True

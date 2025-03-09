@@ -4,7 +4,7 @@ let isSearchMode = false;
 let currentSearchQuery = '';
 
 // DOM Elements
-const reportsFeed = document.getElementById('reportsFeed');
+const reportsList = document.getElementById('reportsList');
 const loadMoreBtn = document.getElementById('loadMoreBtn');
 const searchForm = document.getElementById('searchForm');
 const searchInput = document.getElementById('searchInput');
@@ -16,9 +16,17 @@ const activeFiltersCount = document.getElementById('activeFiltersCount');
 const loadingIndicator = document.getElementById('loadingIndicator');
 const noResultsMessage = document.getElementById('noResultsMessage');
 const reportWebUrl = document.getElementById('reportWebUrl');
+const copyToast = document.getElementById('copyToast');
 
-// Event Listeners
+// Initialize tooltips and toasts
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialize Bootstrap tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Event Listeners
     searchForm.addEventListener('submit', handleSearch);
     loadMoreBtn.addEventListener('click', loadMoreReports);
     applyFiltersBtn.addEventListener('click', applyFilters);
@@ -54,7 +62,7 @@ function loadReports(params = {}) {
     
     // Set default limit
     if (!url.searchParams.has('limit')) {
-        url.searchParams.append('limit', '10');
+        url.searchParams.append('limit', '20');
     }
     
     fetch(url)
@@ -87,18 +95,23 @@ function loadReports(params = {}) {
 
 function renderReports(reports, clearExisting = true) {
     if (clearExisting) {
-        reportsFeed.innerHTML = '';
+        reportsList.innerHTML = '';
     }
     
     reports.forEach(report => {
-        const reportCard = createReportCard(report);
-        reportsFeed.appendChild(reportCard);
+        const row = createReportRow(report);
+        reportsList.appendChild(row);
+    });
+    
+    // Re-initialize tooltips for new elements
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
     });
 }
 
-function createReportCard(report) {
-    const col = document.createElement('div');
-    col.className = 'col';
+function createReportRow(report) {
+    const row = document.createElement('tr');
     
     const publishDate = new Date(report.publish_time);
     const formattedDate = publishDate.toLocaleDateString('en-US', {
@@ -107,27 +120,83 @@ function createReportCard(report) {
         day: 'numeric'
     });
     
-    col.innerHTML = `
-        <div class="card report-card">
-            <div class="card-body">
-                <h5 class="card-title">${escapeHtml(report.title)}</h5>
-                <h6 class="card-subtitle mb-2 text-muted">
-                    <i class="bi bi-calendar-event me-2"></i>${formattedDate}
-                    <i class="bi bi-building ms-3 me-2"></i>${escapeHtml(report.source)}
-                </h6>
-                <p class="card-text">${report.summary ? escapeHtml(report.summary) : 'No summary available.'}</p>
+    row.innerHTML = `
+        <td>
+            <div class="report-title" title="${escapeHtml(report.title)}">
+                ${escapeHtml(report.title)}
             </div>
-            <div class="card-footer bg-transparent d-flex justify-content-between align-items-center">
-                <small class="text-muted">ID: ${report.id}</small>
-                <button class="btn btn-primary btn-sm view-report" data-report-id="${report.id}">
-                    View Details <i class="bi bi-arrow-right ms-1"></i>
-                </button>
-            </div>
-        </div>
+        </td>
+        <td>${escapeHtml(report.source)}</td>
+        <td>${formattedDate}</td>
+        <td class="action-buttons">
+            <button class="btn btn-sm btn-outline-secondary copy-id" 
+                    data-report-id="${report.id}" 
+                    data-bs-toggle="tooltip" 
+                    data-bs-placement="top" 
+                    title="Copy Report ID">
+                <i class="bi bi-clipboard"></i>
+            </button>
+            ${report.web_url ? `
+                <a href="${report.web_url}" target="_blank" 
+                   class="btn btn-sm btn-outline-primary ms-1" 
+                   data-bs-toggle="tooltip" 
+                   data-bs-placement="top" 
+                   title="Open Original Report">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                </a>
+            ` : ''}
+            <button class="btn btn-sm btn-primary ms-1 view-report" 
+                    data-report-id="${report.id}">
+                Details
+            </button>
+        </td>
     `;
     
-    col.querySelector('.view-report').addEventListener('click', () => viewReportDetails(report.id));
-    return col;
+    // Add event listeners
+    row.querySelector('.view-report').addEventListener('click', () => viewReportDetails(report.id));
+    
+    const copyButton = row.querySelector('.copy-id');
+    if (copyButton) {
+        copyButton.addEventListener('click', function() {
+            copyToClipboard(report.id);
+            
+            // Show toast notification
+            const toast = new bootstrap.Toast(copyToast);
+            toast.show();
+            
+            // Update tooltip text temporarily
+            const tooltip = bootstrap.Tooltip.getInstance(copyButton);
+            if (tooltip) {
+                const originalTitle = copyButton.getAttribute('data-bs-original-title');
+                copyButton.setAttribute('data-bs-original-title', 'Copied!');
+                tooltip.show();
+                
+                // Reset tooltip after 1.5 seconds
+                setTimeout(() => {
+                    copyButton.setAttribute('data-bs-original-title', originalTitle);
+                }, 1500);
+            }
+        });
+    }
+    
+    return row;
+}
+
+function copyToClipboard(text) {
+    // Create a temporary textarea element
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'absolute';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    
+    // Select and copy the text
+    textarea.select();
+    document.execCommand('copy');
+    
+    // Remove the temporary element
+    document.body.removeChild(textarea);
 }
 
 function escapeHtml(unsafe) {
@@ -225,6 +294,10 @@ function viewReportDetails(reportId) {
                     <div class="metadata-item">
                         <i class="bi bi-hash"></i>
                         <span>ID: ${report.id}</span>
+                        <button class="btn btn-sm btn-outline-secondary ms-2 copy-detail-id" 
+                                data-report-id="${report.id}">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
                     </div>
                 </div>
                 
@@ -239,7 +312,27 @@ function viewReportDetails(reportId) {
                 ${yaraSection}
             `;
             
-            // Declare bootstrap variable
+            // Add event listener for copying ID in detail view
+            const copyDetailButton = modalContent.querySelector('.copy-detail-id');
+            if (copyDetailButton) {
+                copyDetailButton.addEventListener('click', function() {
+                    copyToClipboard(report.id);
+                    
+                    // Show toast notification
+                    const toast = new bootstrap.Toast(copyToast);
+                    toast.show();
+                    
+                    // Change button text temporarily
+                    const originalHTML = copyDetailButton.innerHTML;
+                    copyDetailButton.innerHTML = '<i class="bi bi-clipboard-check"></i>';
+                    
+                    // Reset button after 1.5 seconds
+                    setTimeout(() => {
+                        copyDetailButton.innerHTML = originalHTML;
+                    }, 1500);
+                });
+            }
+            
             const reportDetailModal = new bootstrap.Modal(document.getElementById('reportDetailModal'));
             reportDetailModal.show();
         })
@@ -276,14 +369,14 @@ function handleSearch(e) {
     if (query) {
         // Reset page token and clear feed for new search
         pageToken = null;
-        reportsFeed.innerHTML = '';
+        reportsList.innerHTML = '';
         isSearchMode = true;
         currentSearchQuery = query;
         searchReports(query);
     } else {
         // If search is empty, go back to regular reports feed
         pageToken = null;
-        reportsFeed.innerHTML = '';
+        reportsList.innerHTML = '';
         isSearchMode = false;
         currentSearchQuery = '';
         loadReports(getFilters());
@@ -301,7 +394,7 @@ function searchReports(query, isLoadMore = false) {
         url.searchParams.append('page_token', pageToken);
     }
     
-    url.searchParams.append('limit', '10');
+    url.searchParams.append('limit', '20');
     
     fetch(url)
         .then(response => {
@@ -345,7 +438,7 @@ function applyFilters() {
     updateActiveFilters(filters);
     
     // Clear existing reports and load with filters
-    reportsFeed.innerHTML = '';
+    reportsList.innerHTML = '';
     loadReports(filters);
     
     // Close the modal

@@ -1,24 +1,18 @@
-.report-card {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.report-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-}
-
-.report-card .card-body {
-    flex-grow: 1;
-}
-
-.report-card .card-text {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
+.report-title {
+    font-weight: 500;
+    max-width: 500px;
     overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.action-buttons {
+    white-space: nowrap;
+}
+
+.action-buttons .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
 }
 
 .filter-badge {
@@ -68,4 +62,25 @@
     padding: 1rem;
     margin-bottom: 1.5rem;
     border-radius: 0.25rem;
+}
+
+/* Tooltip styles */
+.tooltip-inner {
+    max-width: 200px;
+    padding: 0.25rem 0.5rem;
+    color: #fff;
+    text-align: center;
+    background-color: #000;
+    border-radius: 0.25rem;
+}
+
+/* Responsive table adjustments */
+@media (max-width: 768px) {
+    .table th, .table td {
+        padding: 0.5rem;
+    }
+    
+    .report-title {
+        max-width: 200px;
+    }
 }

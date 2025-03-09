@@ -27,10 +27,15 @@
                 </form>
             </div>
             <div class="col-md-4">
-                <button class="btn btn-outline-secondary w-100" type="button" data-bs-toggle="modal" data-bs-target="#filtersModal">
-                    <i class="bi bi-funnel-fill me-2"></i>Filters
-                    <span id="activeFiltersCount" class="badge bg-primary ms-2">0</span>
-                </button>
+                <div class="d-flex">
+                    <button class="btn btn-outline-secondary flex-grow-1 me-2" type="button" data-bs-toggle="modal" data-bs-target="#filtersModal">
+                        <i class="bi bi-funnel-fill me-2"></i>Filters
+                        <span id="activeFiltersCount" class="badge bg-primary ms-2">0</span>
+                    </button>
+                    <button id="clearFiltersHomeBtn" class="btn btn-outline-danger btn-sm" type="button">
+                        <i class="bi bi-x-circle"></i> Clear
+                    </button>
+                </div>
             </div>
         </div>
 

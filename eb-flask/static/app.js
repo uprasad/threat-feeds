@@ -11,6 +11,7 @@ const searchInput = document.getElementById('searchInput');
 const filtersForm = document.getElementById('filtersForm');
 const applyFiltersBtn = document.getElementById('applyFiltersBtn');
 const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+const clearFiltersHomeBtn = document.getElementById('clearFiltersHomeBtn');
 const activeFilters = document.getElementById('activeFilters');
 const activeFiltersCount = document.getElementById('activeFiltersCount');
 const loadingIndicator = document.getElementById('loadingIndicator');
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadMoreBtn.addEventListener('click', loadMoreReports);
     applyFiltersBtn.addEventListener('click', applyFilters);
     clearFiltersBtn.addEventListener('click', clearFilters);
+    clearFiltersHomeBtn.addEventListener('click', clearFilters);
     
     // Initial load
     loadReports();
@@ -129,16 +131,9 @@ function createReportRow(report) {
         <td>${escapeHtml(report.source)}</td>
         <td>${formattedDate}</td>
         <td class="action-buttons">
-            <button class="btn btn-sm btn-outline-secondary copy-id" 
-                    data-report-id="${report.id}" 
-                    data-bs-toggle="tooltip" 
-                    data-bs-placement="top" 
-                    title="Copy Report ID">
-                <i class="bi bi-clipboard"></i>
-            </button>
             ${report.web_url ? `
                 <a href="${report.web_url}" target="_blank" 
-                   class="btn btn-sm btn-outline-primary ms-1" 
+                   class="btn btn-sm btn-outline-primary" 
                    data-bs-toggle="tooltip" 
                    data-bs-placement="top" 
                    title="Open Original Report">
@@ -154,30 +149,6 @@ function createReportRow(report) {
     
     // Add event listeners
     row.querySelector('.view-report').addEventListener('click', () => viewReportDetails(report.id));
-    
-    const copyButton = row.querySelector('.copy-id');
-    if (copyButton) {
-        copyButton.addEventListener('click', function() {
-            copyToClipboard(report.id);
-            
-            // Show toast notification
-            const toast = new bootstrap.Toast(copyToast);
-            toast.show();
-            
-            // Update tooltip text temporarily
-            const tooltip = bootstrap.Tooltip.getInstance(copyButton);
-            if (tooltip) {
-                const originalTitle = copyButton.getAttribute('data-bs-original-title');
-                copyButton.setAttribute('data-bs-original-title', 'Copied!');
-                tooltip.show();
-                
-                // Reset tooltip after 1.5 seconds
-                setTimeout(() => {
-                    copyButton.setAttribute('data-bs-original-title', originalTitle);
-                }, 1500);
-            }
-        });
-    }
     
     return row;
 }
@@ -292,11 +263,12 @@ function viewReportDetails(reportId) {
                         <span>${escapeHtml(report.source)}</span>
                     </div>
                     <div class="metadata-item">
-                        <i class="bi bi-hash"></i>
-                        <span>ID: ${report.id}</span>
-                        <button class="btn btn-sm btn-outline-secondary ms-2 copy-detail-id" 
-                                data-report-id="${report.id}">
-                            <i class="bi bi-clipboard"></i>
+                        <button class="btn btn-sm btn-outline-secondary copy-report-id" 
+                                data-report-id="${report.id}"
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="top"
+                                title="Copy Report ID">
+                            <i class="bi bi-clipboard"></i> Copy ID
                         </button>
                     </div>
                 </div>
@@ -313,25 +285,46 @@ function viewReportDetails(reportId) {
             `;
             
             // Add event listener for copying ID in detail view
-            const copyDetailButton = modalContent.querySelector('.copy-detail-id');
-            if (copyDetailButton) {
-                copyDetailButton.addEventListener('click', function() {
+            const copyButton = modalContent.querySelector('.copy-report-id');
+            if (copyButton) {
+                copyButton.addEventListener('click', function() {
                     copyToClipboard(report.id);
                     
                     // Show toast notification
                     const toast = new bootstrap.Toast(copyToast);
                     toast.show();
                     
+                    // Update tooltip text temporarily
+                    const tooltip = bootstrap.Tooltip.getInstance(copyButton);
+                    if (tooltip) {
+                        const originalTitle = copyButton.getAttribute('data-bs-original-title');
+                        copyButton.setAttribute('data-bs-original-title', 'Copied!');
+                        tooltip.show();
+                        
+                        // Reset tooltip after 1.5 seconds
+                        setTimeout(() => {
+                            copyButton.setAttribute('data-bs-original-title', originalTitle);
+                            tooltip.dispose(); // Dispose of the tooltip instance
+                            new bootstrap.Tooltip(copyButton); // Re-initialize the tooltip
+                        }, 1500);
+                    }
+                    
                     // Change button text temporarily
-                    const originalHTML = copyDetailButton.innerHTML;
-                    copyDetailButton.innerHTML = '<i class="bi bi-clipboard-check"></i>';
+                    const originalHTML = copyButton.innerHTML;
+                    copyButton.innerHTML = '<i class="bi bi-clipboard-check"></i> Copied!';
                     
                     // Reset button after 1.5 seconds
                     setTimeout(() => {
-                        copyDetailButton.innerHTML = originalHTML;
+                        copyButton.innerHTML = originalHTML;
                     }, 1500);
                 });
             }
+            
+            // Initialize tooltips for new elements in the modal
+            const tooltipTriggerList = [].slice.call(modalContent.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
             
             const reportDetailModal = new bootstrap.Modal(document.getElementById('reportDetailModal'));
             reportDetailModal.show();
@@ -499,6 +492,9 @@ function updateActiveFilters(filters) {
     
     activeFiltersCount.textContent = count;
     activeFiltersCount.style.display = count > 0 ? 'inline-block' : 'none';
+    
+    // Show/hide the clear filters home button based on whether there are active filters
+    clearFiltersHomeBtn.style.display = count > 0 ? 'inline-block' : 'none';
 }
 
 function removeFilter(key) {

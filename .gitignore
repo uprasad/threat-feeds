@@ -1,8 +1,10 @@
-.ipynb_checkpoints/
+.stuff.txt
 enterprise-attack.json
+reports.db
+
+.ipynb_checkpoints/
 sans-venv/
 eb-flask/flask-app-venv/
 eb-flask/__pycache__/
-.stuff.txt
 pagedata/
-reports.db
+pageindex/

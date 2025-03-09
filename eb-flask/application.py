@@ -3,6 +3,7 @@ import boto3
 from botocore.exceptions import ClientError
 from datetime import datetime
 from flask import Flask, request, jsonify
+from flask import render_template
 import json
 import psycopg2 as pg
 import psycopg2.extras as pg_extras
@@ -43,7 +44,7 @@ def create_pg_conn():
 
 @application.route("/")
 def hello():
-    return "<p>I'm a teapot</p>", 418
+    return render_template('index.html')
 
 @application.route("/v1/reports")
 def list_reports():

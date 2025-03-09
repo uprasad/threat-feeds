@@ -1,0 +1,71 @@
+.report-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.report-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.report-card .card-body {
+    flex-grow: 1;
+}
+
+.report-card .card-text {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.filter-badge {
+    cursor: pointer;
+}
+
+.filter-badge:hover {
+    opacity: 0.8;
+}
+
+.ioc-section {
+    margin-bottom: 1.5rem;
+}
+
+.ioc-list {
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: #f8f9fa;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+}
+
+.ioc-item {
+    font-family: monospace;
+    word-break: break-all;
+}
+
+.report-metadata {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.metadata-item {
+    display: flex;
+    align-items: center;
+}
+
+.metadata-item i {
+    margin-right: 0.5rem;
+}
+
+.summary-section {
+    background-color: #f8f9fa;
+    border-left: 4px solid #0d6efd;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    border-radius: 0.25rem;
+}

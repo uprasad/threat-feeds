@@ -79,7 +79,7 @@ def list_reports():
         try:
             # Convert to datetime object if it's a timestamp string
             if published_after.isdigit():
-                published_after = datetime.fromtimestamp(int(start_time))
+                published_after = datetime.fromtimestamp(int(published_after))
             query += " AND publish_time > %s"
             params.append(published_after)
         except (ValueError, TypeError):

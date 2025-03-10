@@ -273,11 +273,11 @@ def search_reports():
     finally:
         pg_conn.close()
 
-    next_page_token = base64.b64encode(str(pagenum+1).encode()).decode()
     response = {
         "reports": reports,
-        "next_page_token": next_page_token,
     }
+    if len(reports) >= limit:
+        response["next_page_token"] = base64.b64encode(str(pagenum+1).encode()).decode()
 
     return jsonify(response)
 

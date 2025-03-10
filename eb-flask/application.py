@@ -44,7 +44,10 @@ def create_pg_conn():
 
 @application.route("/")
 def hello():
-    return render_template('index.html')
+    try:
+        return render_template('index.html')
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @application.route("/v1/reports")
 def list_reports():

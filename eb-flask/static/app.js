@@ -302,7 +302,7 @@ function viewReportDetails(reportId) {
                     ? `
                 <div class="summary-section">
                     <h5>Summary</h5>
-                    <p>${escapeHtml(report.summary)}</p>
+                    <div class="summary-content">${report.summary}</div>
                 </div>
                 `
                     : ""

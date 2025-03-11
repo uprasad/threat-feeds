@@ -242,6 +242,7 @@ def search_reports():
             return jsonify({"error": "invalid page token"}), 400
 
     reports = []
+    total = 0
     try:
         with ix.searcher() as searcher, pg_conn.cursor(cursor_factory=pg_extras.DictCursor) as pg_cur:
             parser = qparser.MultifieldParser(["title", "content"],
@@ -250,9 +251,14 @@ def search_reports():
                                                           "content": 1.0})
             query = parser.parse(query_str)
             results = searcher.search_page(query, pagenum, pagelen=limit)
+            results.results.fragmenter.surround = 50
+
+            total = results.total
 
             for hit in results:
                 report_id = hit["id"]
+                highlights = hit.highlights("content")
+
                 pg_cur.execute("""
                     SELECT id, title, source, publish_time, web_url
                     FROM report
@@ -269,6 +275,7 @@ def search_reports():
                     "publish_time": row["publish_time"].isoformat() if row["publish_time"] else None,
                     "source": row["source"],
                     "web_url": row["web_url"],
+                    "highlights": highlights,
                 })
 
     except Exception as e:
@@ -278,6 +285,7 @@ def search_reports():
 
     response = {
         "reports": reports,
+        "total": total,
     }
     if len(reports) >= limit:
         response["next_page_token"] = base64.b64encode(str(pagenum+1).encode()).decode()

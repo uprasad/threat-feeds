@@ -11,7 +11,7 @@ const searchForm = document.getElementById("searchForm")
 const searchInput = document.getElementById("searchInput")
 const filtersForm = document.getElementById("filtersForm")
 const applyFiltersBtn = document.getElementById("applyFiltersBtn")
-const clearFiltersBtn = document.getElementById("clearFiltersBtn")
+const clearFiltersBtn = document.getElementById("clearFiltersHomeBtn")
 const clearFiltersHomeBtn = document.getElementById("clearFiltersHomeBtn")
 const activeFilters = document.getElementById("activeFilters")
 const activeFiltersCount = document.getElementById("activeFiltersCount")
@@ -142,7 +142,7 @@ function createReportRow(report) {
               report.highlights
                 ? `
                 <div class="report-highlights mt-2">
-                    <small class="text-muted">${escapeHtml(report.highlights)}</small>
+                    ${report.highlights}
                 </div>
             `
                 : ""
@@ -393,6 +393,9 @@ function handleSearch(e) {
     isSearchMode = true
     currentSearchQuery = query
     searchReports(query)
+
+    // Show the clear button when search is executed
+    clearFiltersHomeBtn.style.display = "inline-block"
   } else {
     // If search is empty, go back to regular reports feed
     pageToken = null
@@ -401,6 +404,14 @@ function handleSearch(e) {
     currentSearchQuery = ""
     // Hide the search results count
     searchResultsContainer.style.display = "none"
+
+    // Only hide the clear button if there are no active filters
+    const filters = getFilters()
+    const hasActiveFilters = Object.values(filters).some((value) => value !== null)
+    if (!hasActiveFilters) {
+      clearFiltersHomeBtn.style.display = "none"
+    }
+
     loadReports(getFilters())
   }
 }
@@ -536,8 +547,8 @@ function updateActiveFilters(filters) {
   activeFiltersCount.textContent = count
   activeFiltersCount.style.display = count > 0 ? "inline-block" : "none"
 
-  // Show/hide the clear filters home button based on whether there are active filters
-  clearFiltersHomeBtn.style.display = count > 0 ? "inline-block" : "none"
+  // Show/hide the clear filters home button based on whether there are active filters OR search mode
+  clearFiltersHomeBtn.style.display = count > 0 || isSearchMode ? "inline-block" : "none"
 }
 
 function removeFilter(key) {
@@ -560,6 +571,20 @@ function removeFilter(key) {
 }
 
 function clearFilters() {
+  // Reset the form
   filtersForm.reset()
+
+  // Also clear the search if in search mode
+  if (isSearchMode) {
+    searchInput.value = ""
+    isSearchMode = false
+    currentSearchQuery = ""
+    searchResultsContainer.style.display = "none"
+  }
+
+  // Hide the clear button
+  clearFiltersHomeBtn.style.display = "none"
+
+  // Apply filters (which will now be empty)
   applyFilters()
 }

@@ -18,7 +18,9 @@ CREATE TABLE IF NOT EXISTS report (
     mitre TEXT, -- json
     report_type TEXT,
     web_url TEXT UNIQUE,
-    report_data_url TEXT UNIQUE
+    report_data_url TEXT UNIQUE,
+    ai_invalid_iocs TEXT, -- json
+    ai_irrelevant_iocs TEXT --json
 );
 
 CREATE INDEX IF NOT EXISTS report_publish_time_idx ON report (publish_time);

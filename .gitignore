@@ -1,6 +1,8 @@
 .stuff.txt
 enterprise-attack.json
 reports.db
+top-1m.csv*
+eb-flask.zip
 
 .ipynb_checkpoints/
 sans-venv/
@@ -8,3 +10,4 @@ eb-flask/flask-app-venv/
 eb-flask/__pycache__/
 pagedata/
 pageindex/
+parseddata/

@@ -292,6 +292,10 @@ def search_reports():
 
     return jsonify(response)
 
+@application.route("/v1/reports/related/<string:report_id>")
+def related_reports(report_id):
+    return jsonify("hi there")
+
 if __name__ == '__main__':
     application.debug = True
     application.run()

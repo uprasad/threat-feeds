@@ -178,20 +178,57 @@ function createReportRow(report) {
 }
 
 function copyToClipboard(text) {
+  // Use the modern Clipboard API if available
+  if (navigator.clipboard && window.isSecureContext) {
+    // Return the promise
+    navigator.clipboard.writeText(text).catch((err) => {
+      console.error("Could not copy text: ", err)
+      // Fall back to the older method if the Clipboard API fails
+      fallbackCopyToClipboard(text)
+    })
+  } else {
+    // Fall back to the older method for browsers that don't support Clipboard API
+    // or for non-secure contexts (non-HTTPS)
+    fallbackCopyToClipboard(text)
+  }
+}
+
+function fallbackCopyToClipboard(text) {
   // Create a temporary textarea element
   const textarea = document.createElement("textarea")
   textarea.value = text
-  textarea.setAttribute("readonly", "")
+  textarea.setAttribute("readonly", "") // Make it readonly to be tamper-proof
   textarea.style.position = "absolute"
   textarea.style.left = "-9999px"
+
+  // Ensure the element is visible and in the DOM
   document.body.appendChild(textarea)
 
-  // Select and copy the text
+  // Check if there's any text selection currently
+  const selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false
+
+  // Select the text in the textarea
   textarea.select()
-  document.execCommand("copy")
+  textarea.setSelectionRange(0, textarea.value.length) // For mobile devices
+
+  // Copy the selected text to clipboard
+  let success = false
+  try {
+    success = document.execCommand("copy")
+  } catch (err) {
+    console.error("Unable to copy to clipboard", err)
+  }
 
   // Remove the temporary element
   document.body.removeChild(textarea)
+
+  // Restore the original selection if there was any
+  if (selected) {
+    document.getSelection().removeAllRanges()
+    document.getSelection().addRange(selected)
+  }
+
+  return success
 }
 
 function escapeHtml(unsafe) {
@@ -316,7 +353,9 @@ function viewReportDetails(reportId) {
       const copyButton = modalContent.querySelector(".copy-report-id")
       if (copyButton) {
         copyButton.addEventListener("click", () => {
-          copyToClipboard(report.id)
+          // Get the report ID from the button's data attribute
+          const reportId = copyButton.getAttribute("data-report-id")
+          copyToClipboard(reportId)
 
           // Show toast notification
           const toast = new bootstrap.Toast(copyToast)

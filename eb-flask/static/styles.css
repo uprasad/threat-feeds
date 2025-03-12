@@ -185,6 +185,7 @@
   border-radius: 4px;
 }
 
+/* Update the false-positive-badge styling to work better when positioned after the text */
 .false-positive-badge {
   background-color: #dc3545;
   color: white;
@@ -192,7 +193,10 @@
   padding: 2px 5px;
   border-radius: 3px;
   font-weight: bold;
-  margin-right: 5px;
+  margin-left: 5px;
+  margin-right: 2px;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 .false-positive-reason-icon {

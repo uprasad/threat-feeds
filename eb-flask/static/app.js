@@ -424,7 +424,7 @@ function fetchRelatedReports(reportId) {
     })
 }
 
-// Update the createIocSection function to use tooltips for false positive reasons
+// Update the createIocSection function to move the FP badge after the IOC text
 function createIocSection(title, items, falsePositives = {}) {
   // Separate regular IOCs from false positives
   const regularIocs = []
@@ -453,12 +453,12 @@ function createIocSection(title, items, falsePositives = {}) {
   })
 
   // Add false positive IOCs with indicators and tooltips for reasons
-  // Remove the divider and just add the false positives
+  // Move the FP badge after the IOC text for better alignment
   falsePositiveIocs.forEach((fp) => {
     html += `
       <div class="ioc-item false-positive">
-        <span class="false-positive-badge">FP</span>
         ${escapeHtml(fp.value)}
+        <span class="false-positive-badge">FP</span>
         <i class="bi bi-question-circle false-positive-reason-icon" 
            data-bs-toggle="tooltip" 
            data-bs-placement="top" 

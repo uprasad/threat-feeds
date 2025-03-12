@@ -199,7 +199,9 @@ def get_report(report_id):
             md5s,
             sha1s,
             mitre,
-            web_url
+            web_url,
+            ai_invalid_iocs,
+            ai_irrelevant_iocs
         FROM report
         WHERE id = %s
     """
@@ -226,6 +228,15 @@ def get_report(report_id):
             # but we need to ensure it's not None
             if result["mitre"] is None:
                 result["mitre"] = {}
+
+            invalid_iocs = result["ai_invalid_iocs"] if result["ai_invalid_iocs"] else {}
+            irrelevant_iocs = result["ai_irrelevant_iocs"] if result["ai_irrelevant_iocs"] else {}
+
+            false_positive_iocs = invalid_iocs | irrelevant_iocs
+
+            result["false_positives"] = false_positive_iocs
+            result.pop("ai_invalid_iocs")
+            result.pop("ai_irrelevant_iocs")
 
             return jsonify(result)
     except Exception as e:

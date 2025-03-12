@@ -187,6 +187,7 @@ function escapeHtml(unsafe) {
     .replace(/'/g, "&#039;")
 }
 
+// Update the viewReportDetails function to initialize tooltips after creating IOC sections
 function viewReportDetails(reportId) {
   showLoading(true)
 
@@ -423,6 +424,7 @@ function fetchRelatedReports(reportId) {
     })
 }
 
+// Update the createIocSection function to use tooltips for false positive reasons
 function createIocSection(title, items, falsePositives = {}) {
   // Separate regular IOCs from false positives
   const regularIocs = []
@@ -450,20 +452,19 @@ function createIocSection(title, items, falsePositives = {}) {
     html += `<div class="ioc-item">${escapeHtml(item)}</div>`
   })
 
-  // Add false positive IOCs with indicators and reasons
+  // Add false positive IOCs with indicators and tooltips for reasons
   if (falsePositiveIocs.length > 0) {
     html += `<div class="false-positives-divider">False Positives</div>`
 
     falsePositiveIocs.forEach((fp) => {
       html += `
         <div class="ioc-item false-positive">
-          <div class="d-flex align-items-start">
-            <span class="false-positive-badge me-2" title="False Positive">FP</span>
-            <div>
-              <div>${escapeHtml(fp.value)}</div>
-              <div class="false-positive-reason">Reason: ${escapeHtml(fp.reason)}</div>
-            </div>
-          </div>
+          <span class="false-positive-badge">FP</span>
+          ${escapeHtml(fp.value)}
+          <i class="bi bi-question-circle false-positive-reason-icon" 
+             data-bs-toggle="tooltip" 
+             data-bs-placement="top" 
+             title="Reason: ${escapeHtml(fp.reason)}"></i>
         </div>
       `
     })

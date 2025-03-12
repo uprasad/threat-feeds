@@ -28,7 +28,7 @@
 }
 
 .ioc-list {
-  max-height: 200px;
+  max-height: 400px;
   overflow-y: auto;
   background-color: #f8f9fa;
   border-radius: 0.25rem;
@@ -198,11 +198,12 @@
   padding: 2px 5px;
   border-radius: 3px;
   font-weight: bold;
+  margin-right: 5px;
 }
 
-.false-positive-reason {
-  font-size: 0.8rem;
+.false-positive-reason-icon {
   color: #6c757d;
-  margin-top: 3px;
-  font-style: italic;
+  cursor: help;
+  margin-left: 5px;
+  font-size: 0.8rem;
 }

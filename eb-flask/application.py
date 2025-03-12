@@ -1,14 +1,12 @@
 import base64
 import boto3
 from botocore.exceptions import ClientError
-import chromadb
 from collections import Counter
 from collections import defaultdict
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask import render_template
 import json
-from langchain_text_splitters import HTMLHeaderTextSplitter
 import os
 import psycopg2 as pg
 import psycopg2.extras as pg_extras
@@ -319,11 +317,8 @@ def related_reports(report_id):
     except Exception as e:
         return jsonify({"error": "error connecting to database"}), 503
 
-    headers_to_split_on = [("h1", "Main Topic"), ("h2", "Sub Topic")]
-    splitter = HTMLHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
-
-    query = "SELECT id, source FROM report WHERE id = %s"
-    chunks = []
+    query = "SELECT related_report_ids FROM report WHERE id = %s"
+    related_report_ids = []
     try:
         with pg_conn, pg_conn.cursor(cursor_factory=pg_extras.DictCursor) as pg_cur:
             pg_cur.execute(query, (report_id,))
@@ -333,25 +328,10 @@ def related_reports(report_id):
                 return jsonify({"error": "report not found"}), 404
 
             result = dict(row)
-            source = row["source"]
+            related_report_ids = row["related_report_ids"]
 
-            pagedata_path = os.path.join("pagedata", source, f"{report_id}.html")
-            with open(pagedata_path) as f:
-                chunks = list(chunk_document(splitter, f.read()))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-    # Retrieve similar documents
-    crdb = chromadb.PersistentClient(path="pagevector")
-    collection = crdb.get_collection("reports")
-    
-    results = collection.query(query_texts=chunks, n_results=10)
-    ids = results["ids"]
-    result_report_ids = [rid.split(":")[1] for id_set in ids for rid in id_set]
-    filtered_report_ids = [rid for rid in result_report_ids if rid != report_id]
-
-    result_count = Counter(filtered_report_ids)
-    top_match_ids = [match[0] for match in result_count.most_common(10)]
 
     # Retrieve final results
     query = """
@@ -363,7 +343,7 @@ def related_reports(report_id):
     results = []
     try:
         with pg_conn, pg_conn.cursor(cursor_factory=pg_extras.DictCursor) as pg_cur:
-            pg_cur.execute(query, (tuple(top_match_ids),))
+            pg_cur.execute(query, (tuple(related_report_ids),))
             rows = pg_cur.fetchall()
 
             for row in rows:
@@ -379,7 +359,7 @@ def related_reports(report_id):
     finally:
         pg_conn.close()
 
-    return jsonify({"reports": results})
+    return jsonify({"reports": results[:5]})
 
 if __name__ == '__main__':
     application.debug = True

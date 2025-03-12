@@ -172,15 +172,9 @@
 }
 
 /* Add these styles for false positives */
+/* Remove the false-positives-divider class since we're no longer using it */
 .false-positives-divider {
-  margin: 10px 0;
-  padding: 5px;
-  background-color: #f8d7da;
-  color: #721c24;
-  border-radius: 4px;
-  font-weight: 500;
-  text-align: center;
-  font-size: 0.9rem;
+  display: none; /* Hide it instead of removing it completely to avoid breaking any existing references */
 }
 
 .false-positive {

@@ -453,22 +453,19 @@ function createIocSection(title, items, falsePositives = {}) {
   })
 
   // Add false positive IOCs with indicators and tooltips for reasons
-  if (falsePositiveIocs.length > 0) {
-    html += `<div class="false-positives-divider">False Positives</div>`
-
-    falsePositiveIocs.forEach((fp) => {
-      html += `
-        <div class="ioc-item false-positive">
-          <span class="false-positive-badge">FP</span>
-          ${escapeHtml(fp.value)}
-          <i class="bi bi-question-circle false-positive-reason-icon" 
-             data-bs-toggle="tooltip" 
-             data-bs-placement="top" 
-             title="Reason: ${escapeHtml(fp.reason)}"></i>
-        </div>
-      `
-    })
-  }
+  // Remove the divider and just add the false positives
+  falsePositiveIocs.forEach((fp) => {
+    html += `
+      <div class="ioc-item false-positive">
+        <span class="false-positive-badge">FP</span>
+        ${escapeHtml(fp.value)}
+        <i class="bi bi-question-circle false-positive-reason-icon" 
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Reason: ${escapeHtml(fp.reason)}"></i>
+      </div>
+    `
+  })
 
   html += `
       </div>

@@ -38,6 +38,7 @@
 .ioc-item {
   font-family: monospace;
   word-break: break-all;
+  padding: 2px 0;
 }
 
 .report-metadata {
@@ -177,14 +178,6 @@
   display: none; /* Hide it instead of removing it completely to avoid breaking any existing references */
 }
 
-.false-positive {
-  background-color: #fff8f8;
-  border-left: 3px solid #dc3545;
-  padding: 8px;
-  margin-bottom: 8px;
-  border-radius: 4px;
-}
-
 /* Update the false-positive-badge styling to work better when positioned after the text */
 .false-positive-badge {
   background-color: #dc3545;
@@ -197,6 +190,7 @@
   margin-right: 2px;
   display: inline-block;
   vertical-align: middle;
+  cursor: help;
 }
 
 .false-positive-reason-icon {

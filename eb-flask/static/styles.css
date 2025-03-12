@@ -110,6 +110,29 @@
   border-radius: 0.25rem;
 }
 
+/* Related reports styling */
+.related-reports-content {
+  margin-top: 1rem;
+}
+
+.related-reports-content .list-group-item {
+  transition: background-color 0.2s;
+}
+
+.related-reports-content .list-group-item:hover {
+  background-color: #f8f9fa;
+}
+
+.related-reports-content h6 {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  color: #212529;
+}
+
+.related-reports-content .text-muted {
+  font-size: 0.875rem;
+}
+
 /* Responsive table adjustments */
 @media (max-width: 768px) {
   .table th,
@@ -119,5 +142,14 @@
 
   .report-title {
     max-width: 200px;
+  }
+
+  .related-reports-content .d-flex {
+    flex-direction: column;
+  }
+
+  .related-reports-content .btn {
+    margin-bottom: 0.5rem;
+    width: 100%;
   }
 }

@@ -177,55 +177,38 @@ function createReportRow(report) {
   return row
 }
 
+// Improved clipboard functionality
 function copyToClipboard(text) {
-  // Use the modern Clipboard API if available
-  if (navigator.clipboard && window.isSecureContext) {
-    // Return the promise
-    navigator.clipboard.writeText(text).catch((err) => {
-      console.error("Could not copy text: ", err)
-      // Fall back to the older method if the Clipboard API fails
-      fallbackCopyToClipboard(text)
-    })
-  } else {
-    // Fall back to the older method for browsers that don't support Clipboard API
-    // or for non-secure contexts (non-HTTPS)
-    fallbackCopyToClipboard(text)
-  }
-}
+  // Create a hidden input element
+  const input = document.createElement("input")
+  input.style.position = "fixed"
+  input.style.opacity = 0
+  input.value = text
+  document.body.appendChild(input)
 
-function fallbackCopyToClipboard(text) {
-  // Create a temporary textarea element
-  const textarea = document.createElement("textarea")
-  textarea.value = text
-  textarea.setAttribute("readonly", "") // Make it readonly to be tamper-proof
-  textarea.style.position = "absolute"
-  textarea.style.left = "-9999px"
+  // Select the text
+  input.focus()
+  input.select()
 
-  // Ensure the element is visible and in the DOM
-  document.body.appendChild(textarea)
-
-  // Check if there's any text selection currently
-  const selected = document.getSelection().rangeCount > 0 ? document.getSelection().getRangeAt(0) : false
-
-  // Select the text in the textarea
-  textarea.select()
-  textarea.setSelectionRange(0, textarea.value.length) // For mobile devices
-
-  // Copy the selected text to clipboard
+  // Try to copy using document.execCommand
   let success = false
   try {
     success = document.execCommand("copy")
+    if (!success) {
+      console.log("Copy command was unsuccessful")
+    }
   } catch (err) {
-    console.error("Unable to copy to clipboard", err)
+    console.error("Error copying text: ", err)
   }
 
-  // Remove the temporary element
-  document.body.removeChild(textarea)
+  // Clean up
+  document.body.removeChild(input)
 
-  // Restore the original selection if there was any
-  if (selected) {
-    document.getSelection().removeAllRanges()
-    document.getSelection().addRange(selected)
+  // If execCommand failed and Clipboard API is available, try that
+  if (!success && navigator.clipboard) {
+    navigator.clipboard.writeText(text).catch((err) => {
+      console.error("Clipboard API failed: ", err)
+    })
   }
 
   return success
@@ -244,6 +227,7 @@ function escapeHtml(unsafe) {
 function viewReportDetails(reportId) {
   showLoading(true)
 
+  // Fetch the main report details
   fetch(`/v1/reports/${reportId}`)
     .then((response) => {
       if (!response.ok) {
@@ -347,15 +331,31 @@ function viewReportDetails(reportId) {
                 
                 ${iocSections}
                 ${yaraSection}
+                
+                <!-- Related Reports Section (will be populated by fetchRelatedReports) -->
+                <div id="relatedReportsSection" class="mt-4">
+                    <h5>Related Reports</h5>
+                    <div id="relatedReportsContent" class="related-reports-content">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">Loading related reports...</span>
+                            </div>
+                            <span class="ms-2">Loading related reports...</span>
+                        </div>
+                    </div>
+                </div>
             `
 
       // Add event listener for copying ID in detail view
       const copyButton = modalContent.querySelector(".copy-report-id")
       if (copyButton) {
         copyButton.addEventListener("click", () => {
-          // Get the report ID from the button's data attribute
-          const reportId = copyButton.getAttribute("data-report-id")
-          copyToClipboard(reportId)
+          // Get the report ID directly from the report object
+          const idToCopy = report.id
+          console.log("Copying report ID:", idToCopy) // Debug log
+
+          // Copy to clipboard
+          copyToClipboard(idToCopy)
 
           // Show toast notification
           const toast = new bootstrap.Toast(copyToast)
@@ -393,11 +393,89 @@ function viewReportDetails(reportId) {
 
       const reportDetailModal = new bootstrap.Modal(document.getElementById("reportDetailModal"))
       reportDetailModal.show()
+
+      // Fetch related reports after showing the modal
+      fetchRelatedReports(report.id)
     })
     .catch((error) => {
       console.error("Error loading report details:", error)
       showLoading(false)
       alert("Failed to load report details. Please try again later.")
+    })
+}
+
+// Function to fetch and display related reports
+function fetchRelatedReports(reportId) {
+  const relatedReportsContent = document.getElementById("relatedReportsContent")
+
+  fetch(`/v1/reports/related/${reportId}`)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`)
+      }
+      return response.json()
+    })
+    .then((data) => {
+      if (data.reports && data.reports.length > 0) {
+        // Create HTML for related reports
+        let relatedReportsHtml = '<div class="list-group">'
+
+        data.reports.forEach((report) => {
+          const publishDate = new Date(report.publish_time)
+          const formattedDate = publishDate.toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })
+
+          relatedReportsHtml += `
+            <div class="list-group-item list-group-item-action">
+              <div class="d-flex w-100 justify-content-between">
+                <h6 class="mb-1">${escapeHtml(report.title)}</h6>
+                <small>${formattedDate}</small>
+              </div>
+              <p class="mb-1 text-muted">${escapeHtml(report.source)}</p>
+              <div class="d-flex mt-2">
+                ${
+                  report.web_url
+                    ? `<a href="${report.web_url}" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                    <i class="bi bi-box-arrow-up-right"></i> View Original
+                  </a>`
+                    : ""
+                }
+                <button class="btn btn-sm btn-primary view-related-report" data-report-id="${report.id}">
+                  Details
+                </button>
+              </div>
+            </div>
+          `
+        })
+
+        relatedReportsHtml += "</div>"
+        relatedReportsContent.innerHTML = relatedReportsHtml
+
+        // Add event listeners to the "Details" buttons
+        const detailButtons = relatedReportsContent.querySelectorAll(".view-related-report")
+        detailButtons.forEach((button) => {
+          button.addEventListener("click", () => {
+            const relatedReportId = button.getAttribute("data-report-id")
+            // Close current modal
+            const currentModal = bootstrap.Modal.getInstance(document.getElementById("reportDetailModal"))
+            currentModal.hide()
+            // Show the new report details after a short delay
+            setTimeout(() => {
+              viewReportDetails(relatedReportId)
+            }, 500)
+          })
+        })
+      } else {
+        // No related reports found
+        relatedReportsContent.innerHTML = '<p class="text-muted">No related reports found.</p>'
+      }
+    })
+    .catch((error) => {
+      console.error("Error loading related reports:", error)
+      relatedReportsContent.innerHTML = '<p class="text-danger">Failed to load related reports.</p>'
     })
 }
 

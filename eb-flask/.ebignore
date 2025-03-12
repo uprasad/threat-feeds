@@ -1,1 +1,2 @@
-flask-app-venv
+flask-app-venv/
+__pycache__/

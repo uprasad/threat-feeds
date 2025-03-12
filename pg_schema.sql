@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS report (
     web_url TEXT UNIQUE,
     report_data_url TEXT UNIQUE,
     ai_invalid_iocs JSON,
-    ai_irrelevant_iocs JSON
+    ai_irrelevant_iocs JSON,
+    related_report_ids TEXT[]
 );
 
 CREATE INDEX IF NOT EXISTS report_publish_time_idx ON report (publish_time);

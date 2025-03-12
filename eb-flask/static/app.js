@@ -230,15 +230,15 @@ function viewReportDetails(reportId) {
       }
 
       if (report.urls && report.urls.length > 0) {
-        iocSections += createIocSection("URLs", report.urls)
+        iocSections += createIocSection("URLs", report.urls, report.false_positives)
       }
 
       if (report.ipv4s && report.ipv4s.length > 0) {
-        iocSections += createIocSection("IPv4 Addresses", report.ipv4s)
+        iocSections += createIocSection("IPv4 Addresses", report.ipv4s, report.false_positives)
       }
 
       if (report.ipv6s && report.ipv6s.length > 0) {
-        iocSections += createIocSection("IPv6 Addresses", report.ipv6s)
+        iocSections += createIocSection("IPv6 Addresses", report.ipv6s, report.false_positives)
       }
 
       if (report.cves && report.cves.length > 0) {
@@ -423,15 +423,58 @@ function fetchRelatedReports(reportId) {
     })
 }
 
-function createIocSection(title, items) {
-  return `
-        <div class="ioc-section">
-            <h5>${title} (${items.length})</h5>
-            <div class="ioc-list">
-                ${items.map((item) => `<div class="ioc-item">${escapeHtml(item)}</div>`).join("")}
+function createIocSection(title, items, falsePositives = {}) {
+  // Separate regular IOCs from false positives
+  const regularIocs = []
+  const falsePositiveIocs = []
+
+  items.forEach((item) => {
+    if (falsePositives && falsePositives[item]) {
+      falsePositiveIocs.push({ value: item, reason: falsePositives[item] })
+    } else {
+      regularIocs.push(item)
+    }
+  })
+
+  // Sort to ensure false positives appear at the bottom
+  const sortedItems = [...regularIocs, ...falsePositiveIocs.map((fp) => fp.value)]
+
+  let html = `
+    <div class="ioc-section">
+      <h5>${title} (${items.length})</h5>
+      <div class="ioc-list">
+  `
+
+  // Add regular IOCs
+  regularIocs.forEach((item) => {
+    html += `<div class="ioc-item">${escapeHtml(item)}</div>`
+  })
+
+  // Add false positive IOCs with indicators and reasons
+  if (falsePositiveIocs.length > 0) {
+    html += `<div class="false-positives-divider">False Positives</div>`
+
+    falsePositiveIocs.forEach((fp) => {
+      html += `
+        <div class="ioc-item false-positive">
+          <div class="d-flex align-items-start">
+            <span class="false-positive-badge me-2" title="False Positive">FP</span>
+            <div>
+              <div>${escapeHtml(fp.value)}</div>
+              <div class="false-positive-reason">Reason: ${escapeHtml(fp.reason)}</div>
             </div>
+          </div>
         </div>
-    `
+      `
+    })
+  }
+
+  html += `
+      </div>
+    </div>
+  `
+
+  return html
 }
 
 function loadMoreReports() {

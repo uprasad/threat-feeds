@@ -1,16 +1,36 @@
 import base64
 import boto3
 from botocore.exceptions import ClientError
+import chromadb
+from collections import Counter
+from collections import defaultdict
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask import render_template
 import json
+from langchain_text_splitters import HTMLHeaderTextSplitter
+import os
 import psycopg2 as pg
 import psycopg2.extras as pg_extras
 from whoosh import index
 from whoosh import qparser
 
 application = Flask(__name__)
+
+def chunk_document(splitter, doc):
+    documents = splitter.split_text(doc)
+
+    grouped_docs = defaultdict(list)
+
+    for doc in documents:
+        key = " > ".join(doc.metadata.values())
+        grouped_docs[key].append(doc.page_content)
+
+    agg_grouped_docs = {}
+    for key, values in grouped_docs.items():
+        agg_grouped_docs[key] = "\n\n".join(values)
+
+    return agg_grouped_docs.values()
 
 def get_pg_secret():
     secret_name = "rds!db-087d55ac-2a56-4890-84e2-077ddf7542c8"
@@ -294,7 +314,72 @@ def search_reports():
 
 @application.route("/v1/reports/related/<string:report_id>")
 def related_reports(report_id):
-    return jsonify("hi there")
+    try:
+        pg_conn = create_pg_conn()
+    except Exception as e:
+        return jsonify({"error": "error connecting to database"}), 503
+
+    headers_to_split_on = [("h1", "Main Topic"), ("h2", "Sub Topic")]
+    splitter = HTMLHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+
+    query = "SELECT id, source FROM report WHERE id = %s"
+    chunks = []
+    try:
+        with pg_conn, pg_conn.cursor(cursor_factory=pg_extras.DictCursor) as pg_cur:
+            pg_cur.execute(query, (report_id,))
+            row = pg_cur.fetchone()
+
+            if not row:
+                return jsonify({"error": "report not found"}), 404
+
+            result = dict(row)
+            source = row["source"]
+
+            pagedata_path = os.path.join("pagedata", source, f"{report_id}.html")
+            with open(pagedata_path) as f:
+                chunks = list(chunk_document(splitter, f.read()))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    # Retrieve similar documents
+    crdb = chromadb.PersistentClient(path="pagevector")
+    collection = crdb.get_collection("reports")
+    
+    results = collection.query(query_texts=chunks, n_results=10)
+    ids = results["ids"]
+    result_report_ids = [rid.split(":")[1] for id_set in ids for rid in id_set]
+    filtered_report_ids = [rid for rid in result_report_ids if rid != report_id]
+
+    result_count = Counter(filtered_report_ids)
+    top_match_ids = [match[0] for match in result_count.most_common(10)]
+
+    # Retrieve final results
+    query = """
+        SELECT id, title, source, publish_time, web_url
+        FROM report
+        WHERE id in %s
+    """
+
+    results = []
+    try:
+        with pg_conn, pg_conn.cursor(cursor_factory=pg_extras.DictCursor) as pg_cur:
+            pg_cur.execute(query, (tuple(top_match_ids),))
+            rows = pg_cur.fetchall()
+
+            for row in rows:
+                results.append({
+                    "id": row["id"],
+                    "title": row["title"],
+                    "publish_time": row["publish_time"].isoformat() if row["publish_time"] else None,
+                    "source": row["source"],
+                    "web_url": row["web_url"],
+                })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        pg_conn.close()
+
+    return jsonify({"reports": results})
 
 if __name__ == '__main__':
     application.debug = True

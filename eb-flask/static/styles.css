@@ -76,6 +76,23 @@
   line-height: 1.4;
 }
 
+/* Report ID display */
+#reportIdSection {
+  transition: all 0.3s ease;
+}
+
+#reportIdDisplay {
+  font-family: monospace;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.user-select-all {
+  user-select: all;
+}
+
 /* Highlight matches in search results */
 .report-highlights b.match {
   font-weight: bold;

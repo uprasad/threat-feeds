@@ -177,43 +177,6 @@ function createReportRow(report) {
   return row
 }
 
-// Improved clipboard functionality
-function copyToClipboard(text) {
-  // Create a hidden input element
-  const input = document.createElement("input")
-  input.style.position = "fixed"
-  input.style.opacity = 0
-  input.value = text
-  document.body.appendChild(input)
-
-  // Select the text
-  input.focus()
-  input.select()
-
-  // Try to copy using document.execCommand
-  let success = false
-  try {
-    success = document.execCommand("copy")
-    if (!success) {
-      console.log("Copy command was unsuccessful")
-    }
-  } catch (err) {
-    console.error("Error copying text: ", err)
-  }
-
-  // Clean up
-  document.body.removeChild(input)
-
-  // If execCommand failed and Clipboard API is available, try that
-  if (!success && navigator.clipboard) {
-    navigator.clipboard.writeText(text).catch((err) => {
-      console.error("Clipboard API failed: ", err)
-    })
-  }
-
-  return success
-}
-
 function escapeHtml(unsafe) {
   if (!unsafe) return ""
   return unsafe
@@ -308,13 +271,17 @@ function viewReportDetails(reportId) {
                         <span>${escapeHtml(report.source)}</span>
                     </div>
                     <div class="metadata-item">
-                        <button class="btn btn-sm btn-outline-secondary copy-report-id" 
-                                data-report-id="${report.id}"
-                                data-bs-toggle="tooltip"
-                                data-bs-placement="top"
-                                title="Copy Report ID">
-                            <i class="bi bi-clipboard"></i> Copy ID
+                        <button id="toggleReportIdBtn" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-eye"></i> Show ID
                         </button>
+                    </div>
+                </div>
+                
+                <!-- Report ID section (hidden by default) -->
+                <div id="reportIdSection" class="alert alert-secondary mb-4" style="display: none;">
+                    <div class="d-flex align-items-center">
+                        <strong class="me-2">Report ID:</strong>
+                        <code id="reportIdDisplay" class="user-select-all">${report.id}</code>
                     </div>
                 </div>
                 
@@ -346,44 +313,21 @@ function viewReportDetails(reportId) {
                 </div>
             `
 
-      // Add event listener for copying ID in detail view
-      const copyButton = modalContent.querySelector(".copy-report-id")
-      if (copyButton) {
-        copyButton.addEventListener("click", () => {
-          // Get the report ID directly from the report object
-          const idToCopy = report.id
-          console.log("Copying report ID:", idToCopy) // Debug log
+      // Add event listener for toggling report ID visibility
+      const toggleButton = modalContent.querySelector("#toggleReportIdBtn")
+      const reportIdSection = modalContent.querySelector("#reportIdSection")
 
-          // Copy to clipboard
-          copyToClipboard(idToCopy)
+      if (toggleButton && reportIdSection) {
+        toggleButton.addEventListener("click", () => {
+          const isVisible = reportIdSection.style.display !== "none"
 
-          // Show toast notification
-          const toast = new bootstrap.Toast(copyToast)
-          toast.show()
+          // Toggle visibility
+          reportIdSection.style.display = isVisible ? "none" : "block"
 
-          // Update tooltip text temporarily
-          const tooltip = bootstrap.Tooltip.getInstance(copyButton)
-          if (tooltip) {
-            const originalTitle = copyButton.getAttribute("data-bs-original-title")
-            copyButton.setAttribute("data-bs-original-title", "Copied!")
-            tooltip.show()
-
-            // Reset tooltip after 1.5 seconds
-            setTimeout(() => {
-              copyButton.setAttribute("data-bs-original-title", originalTitle)
-              tooltip.dispose() // Dispose of the tooltip instance
-              new bootstrap.Tooltip(copyButton) // Re-initialize the tooltip
-            }, 1500)
-          }
-
-          // Change button text temporarily
-          const originalHTML = copyButton.innerHTML
-          copyButton.innerHTML = '<i class="bi bi-clipboard-check"></i> Copied!'
-
-          // Reset button after 1.5 seconds
-          setTimeout(() => {
-            copyButton.innerHTML = originalHTML
-          }, 1500)
+          // Update button text and icon
+          toggleButton.innerHTML = isVisible
+            ? '<i class="bi bi-eye"></i> Show ID'
+            : '<i class="bi bi-eye-slash"></i> Hide ID'
         })
       }
 

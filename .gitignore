@@ -10,4 +10,5 @@ eb-flask/flask-app-venv/
 eb-flask/__pycache__/
 pagedata/
 pageindex/
+pagevector/
 parseddata/

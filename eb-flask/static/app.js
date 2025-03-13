@@ -187,19 +187,28 @@ function escapeHtml(unsafe) {
     .replace(/'/g, "&#039;")
 }
 
-// Update the viewReportDetails function to initialize tooltips after creating IOC sections
+// Update the viewReportDetails function to fetch data from both endpoints
 function viewReportDetails(reportId) {
   showLoading(true)
 
-  // Fetch the main report details
-  fetch(`/v1/reports/${reportId}`)
-    .then((response) => {
+  // Fetch both the main report details and the enriched data
+  Promise.all([
+    fetch(`/v1/reports/${reportId}`).then((response) => {
       if (!response.ok) {
         throw new Error(`HTTP error! Status: ${response.status}`)
       }
       return response.json()
-    })
-    .then((report) => {
+    }),
+    fetch(`/v1/reports/enrich/${reportId}`).then((response) => {
+      if (!response.ok) {
+        // If the enrich endpoint fails, we'll just use an empty object
+        console.warn("Enrichment data not available")
+        return { mitre: {} }
+      }
+      return response.json()
+    }),
+  ])
+    .then(([report, enrichedData]) => {
       showLoading(false)
 
       const publishDate = new Date(report.publish_time)
@@ -244,6 +253,12 @@ function viewReportDetails(reportId) {
 
       if (report.cves && report.cves.length > 0) {
         iocSections += createIocSection("CVEs", report.cves)
+      }
+
+      // Create MITRE ATT&CK section if data exists
+      let mitreSection = ""
+      if (report.mitre) {
+        mitreSection = createMitreSection(report.mitre, enrichedData.mitre || {})
       }
 
       // YARA rules might need special formatting
@@ -297,6 +312,7 @@ function viewReportDetails(reportId) {
                     : ""
                 }
                 
+                ${mitreSection}
                 ${iocSections}
                 ${yaraSection}
                 
@@ -347,6 +363,87 @@ function viewReportDetails(reportId) {
       showLoading(false)
       alert("Failed to load report details. Please try again later.")
     })
+}
+
+// Add a new function to create the MITRE ATT&CK section
+function createMitreSection(mitreData, enrichedMitreData) {
+  // Check if there's any MITRE data to display
+  const hasData = Object.values(mitreData).some((arr) => arr && arr.length > 0)
+
+  if (!hasData) {
+    return ""
+  }
+
+  let html = `
+    <div class="mitre-section mb-4">
+      <h4 class="mb-3">MITRE ATT&CK</h4>
+      <div class="row">
+  `
+
+  // Define the fields and their display names
+  const fields = [
+    { key: "group_names", title: "Groups" },
+    { key: "group_ids", title: "Group IDs" },
+    { key: "campaign_names", title: "Campaigns" },
+    { key: "campaign_ids", title: "Campaign IDs" },
+    { key: "software_ids", title: "Software" },
+    { key: "tactics", title: "Tactics" },
+    { key: "techniques", title: "Techniques" },
+    { key: "datasources", title: "Data Sources" },
+  ]
+
+  // Create a section for each field that has data
+  fields.forEach((field) => {
+    const values = mitreData[field.key]
+    if (values && values.length > 0) {
+      html += `
+        <div class="col-md-6 mb-3">
+          <div class="card h-100">
+            <div class="card-header">
+              <h5 class="mb-0">${field.title}</h5>
+            </div>
+            <div class="card-body">
+              <ul class="list-group list-group-flush mitre-list">
+      `
+
+      // Add each value, with a link if enriched data is available
+      values.forEach((value) => {
+        const enrichedValue = enrichedMitreData[field.key] && enrichedMitreData[field.key][value]
+
+        if (enrichedValue) {
+          // We have enriched data for this value
+          const displayName = enrichedValue.name || value
+          html += `
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <span>${escapeHtml(displayName)}</span>
+              <a href="${enrichedValue.url}" target="_blank" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-box-arrow-up-right"></i>
+              </a>
+            </li>
+          `
+        } else {
+          // No enriched data, just show the value
+          html += `
+            <li class="list-group-item">${escapeHtml(value)}</li>
+          `
+        }
+      })
+
+      html += `
+              </ul>
+            </div>
+          </div>
+        </div>
+      `
+    }
+  })
+
+  html += `
+      </div>
+    </div>
+  `
+
+  return html
 }
 
 // Function to fetch and display related reports

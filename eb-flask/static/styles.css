@@ -199,3 +199,27 @@
   margin-left: 5px;
   font-size: 0.8rem;
 }
+
+/* Add styles for the MITRE ATT&CK section */
+.mitre-section {
+  margin-bottom: 2rem;
+}
+
+.mitre-section .card-header {
+  background-color: #f8f9fa;
+}
+
+.mitre-list {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.mitre-list .list-group-item {
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+}
+
+.mitre-list .btn {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
+}

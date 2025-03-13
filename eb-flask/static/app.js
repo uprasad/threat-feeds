@@ -21,6 +21,26 @@ const reportWebUrl = document.getElementById("reportWebUrl")
 const copyToast = document.getElementById("copyToast")
 const searchResultsContainer = document.getElementById("searchResultsContainer")
 
+// Vendor abbreviations mapping
+const vendorAbbreviations = {
+  VirusTotal: "VT",
+  "Hybrid-Analysis": "HA",
+  MalwareBazaar: "MB",
+  AnyRun: "AR",
+  ThreatBook: "TB",
+  AlienVault: "AV",
+  Maltiverse: "MT",
+  ThreatMiner: "TM",
+  InQuest: "IQ",
+  Triage: "TR",
+  Intezer: "IN",
+  URLhaus: "UH",
+  "Cisco Talos": "CT",
+  ReversingLabs: "RL",
+  MalShare: "MS",
+  "Joe Sandbox": "JS",
+}
+
 // Initialize tooltips and toasts
 document.addEventListener("DOMContentLoaded", () => {
   // Initialize Bootstrap tooltips
@@ -203,7 +223,7 @@ function viewReportDetails(reportId) {
       if (!response.ok) {
         // If the enrich endpoint fails, we'll just use an empty object
         console.warn("Enrichment data not available")
-        return { mitre: {} }
+        return { mitre: {}, md5s: {}, sha1s: {}, sha256s: {} }
       }
       return response.json()
     }),
@@ -228,15 +248,20 @@ function viewReportDetails(reportId) {
 
       // Create IOC sections if they exist
       if (report.sha1s && report.sha1s.length > 0) {
-        iocSections += createIocSection("SHA1 Hashes", report.sha1s)
+        iocSections += createIocSection("SHA1 Hashes", report.sha1s, report.false_positives, enrichedData.sha1s || {})
       }
 
       if (report.sha256s && report.sha256s.length > 0) {
-        iocSections += createIocSection("SHA256 Hashes", report.sha256s)
+        iocSections += createIocSection(
+          "SHA256 Hashes",
+          report.sha256s,
+          report.false_positives,
+          enrichedData.sha256s || {},
+        )
       }
 
       if (report.md5s && report.md5s.length > 0) {
-        iocSections += createIocSection("MD5 Hashes", report.md5s)
+        iocSections += createIocSection("MD5 Hashes", report.md5s, report.false_positives, enrichedData.md5s || {})
       }
 
       if (report.urls && report.urls.length > 0) {
@@ -521,8 +546,8 @@ function fetchRelatedReports(reportId) {
     })
 }
 
-// Update the createIocSection function to ensure consistent left-alignment and add tooltip to FP badge
-function createIocSection(title, items, falsePositives = {}) {
+// Update the createIocSection function to handle enrichment data
+function createIocSection(title, items, falsePositives = {}, enrichmentData = {}) {
   // Separate regular IOCs from false positives
   const regularIocs = []
   const falsePositiveIocs = []
@@ -555,7 +580,13 @@ function createIocSection(title, items, falsePositives = {}) {
         </a>
       </div>`
     } else {
-      html += `<div class="ioc-item">${escapeHtml(item)}</div>`
+      // For hash types, check if we have enrichment data
+      const enrichedItem = enrichmentData[item]
+
+      html += `<div class="ioc-item">
+        ${escapeHtml(item)}
+        ${enrichedItem ? createEnrichmentBadges(enrichedItem) : ""}
+      </div>`
     }
   })
 
@@ -580,9 +611,13 @@ function createIocSection(title, items, falsePositives = {}) {
       </div>
     `
     } else {
+      // For hash types, check if we have enrichment data
+      const enrichedItem = enrichmentData[fp.value]
+
       html += `
       <div class="ioc-item">
         ${escapeHtml(fp.value)}
+        ${enrichedItem ? createEnrichmentBadges(enrichedItem) : ""}
         <span class="false-positive-badge" 
               data-bs-toggle="tooltip" 
               data-bs-placement="top" 
@@ -602,6 +637,27 @@ function createIocSection(title, items, falsePositives = {}) {
   `
 
   return html
+}
+
+// Helper function to create enrichment badges for a hash
+function createEnrichmentBadges(enrichmentData) {
+  let badgesHtml = ""
+
+  Object.entries(enrichmentData).forEach(([vendor, url]) => {
+    const abbreviation = vendorAbbreviations[vendor] || vendor.substring(0, 2)
+
+    badgesHtml += `
+      <a href="${url}" 
+         target="_blank" 
+         rel="noopener noreferrer" 
+         class="vendor-badge" 
+         data-bs-toggle="tooltip" 
+         data-bs-placement="top" 
+         title="View on ${vendor}">${abbreviation}</a>
+    `
+  })
+
+  return badgesHtml
 }
 
 function loadMoreReports() {

@@ -41,6 +41,21 @@
   padding: 2px 0;
 }
 
+/* Add styling for CVE links */
+.ioc-item a {
+  color: #0d6efd;
+  text-decoration: none;
+}
+
+.ioc-item a:hover {
+  text-decoration: underline;
+}
+
+.ioc-item .bi-box-arrow-up-right {
+  font-size: 0.75rem;
+  vertical-align: super;
+}
+
 .report-metadata {
   display: flex;
   flex-wrap: wrap;

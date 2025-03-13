@@ -11,7 +11,7 @@ const searchForm = document.getElementById("searchForm")
 const searchInput = document.getElementById("searchInput")
 const filtersForm = document.getElementById("filtersForm")
 const applyFiltersBtn = document.getElementById("applyFiltersBtn")
-const clearFiltersBtn = document.getElementById("clearFiltersHomeBtn")
+const clearFiltersBtn = document.getElementById("clearFiltersBtn")
 const clearFiltersHomeBtn = document.getElementById("clearFiltersHomeBtn")
 const activeFilters = document.getElementById("activeFilters")
 const activeFiltersCount = document.getElementById("activeFiltersCount")
@@ -546,13 +546,41 @@ function createIocSection(title, items, falsePositives = {}) {
 
   // Add regular IOCs
   regularIocs.forEach((item) => {
-    html += `<div class="ioc-item">${escapeHtml(item)}</div>`
+    // Check if this is a CVE section and create links for CVEs
+    if (title === "CVEs") {
+      html += `<div class="ioc-item">
+        <a href="https://nvd.nist.gov/vuln/detail/${item}" target="_blank" rel="noopener noreferrer">
+          ${escapeHtml(item)}
+          <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+        </a>
+      </div>`
+    } else {
+      html += `<div class="ioc-item">${escapeHtml(item)}</div>`
+    }
   })
 
   // Add false positive IOCs with the same container class for consistent alignment
   // Add tooltip to the FP badge explaining what it means
   falsePositiveIocs.forEach((fp) => {
-    html += `
+    if (title === "CVEs") {
+      html += `
+      <div class="ioc-item">
+        <a href="https://nvd.nist.gov/vuln/detail/${fp.value}" target="_blank" rel="noopener noreferrer">
+          ${escapeHtml(fp.value)}
+          <i class="bi bi-box-arrow-up-right ms-1 small"></i>
+        </a>
+        <span class="false-positive-badge" 
+              data-bs-toggle="tooltip" 
+              data-bs-placement="top" 
+              title="False Positive: This indicator has been marked as a false positive">FP</span>
+        <i class="bi bi-question-circle false-positive-reason-icon" 
+           data-bs-toggle="tooltip" 
+           data-bs-placement="top" 
+           title="Reason: ${escapeHtml(fp.reason)}"></i>
+      </div>
+    `
+    } else {
+      html += `
       <div class="ioc-item">
         ${escapeHtml(fp.value)}
         <span class="false-positive-badge" 
@@ -565,6 +593,7 @@ function createIocSection(title, items, falsePositives = {}) {
            title="Reason: ${escapeHtml(fp.reason)}"></i>
       </div>
     `
+    }
   })
 
   html += `

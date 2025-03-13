@@ -372,6 +372,39 @@ def related_reports(report_id):
 
     return jsonify({"reports": results[:5]})
 
+@application.route("/v1/reports/enrich/<string:report_id>")
+def enrich_report(report_id):
+    try:
+        pg_conn = create_pg_conn()
+    except Exception as e:
+        return jsonify({"error": "error connecting to database"}), 503
+
+    query = """
+        SELECT
+            report_id,
+            mitre
+        FROM enriched_report
+        WHERE report_id = %s
+    """
+    try:
+        with pg_conn, pg_conn.cursor(cursor_factory=pg_extras.DictCursor) as pg_cur:
+            pg_cur.execute(query, (report_id,))
+            row = pg_cur.fetchone()
+
+            if not row:
+                return jsonify({"error": "report not found"}), 404
+
+            result = dict(row)
+
+            if result["mitre"] is None:
+                result["mitre"] = {}
+
+            return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        pg_conn.close()
+
 if __name__ == '__main__':
     application.debug = True
     application.run()

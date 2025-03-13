@@ -65,6 +65,31 @@
   border-radius: 0.25rem;
 }
 
+.summary-content {
+  max-height: 300px;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+/* Add a subtle scrollbar styling for the summary content */
+.summary-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.summary-content::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.summary-content::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.summary-content::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
 .report-highlights {
   font-size: 0.85rem;
   color: #6c757d;

@@ -143,6 +143,7 @@ function renderReports(reports, clearExisting = true) {
   tooltipTriggerList.map((tooltipTriggerEl) => new bootstrap.Tooltip(tooltipTriggerEl))
 }
 
+// Update the createReportRow function to use report.num_iocs instead of calculating
 function createReportRow(report) {
   const row = document.createElement("tr")
 
@@ -152,6 +153,9 @@ function createReportRow(report) {
     month: "short",
     day: "numeric",
   })
+
+  // Use the num_iocs field from the API
+  const iocCount = report.num_iocs || 0
 
   row.innerHTML = `
         <td>
@@ -169,6 +173,9 @@ function createReportRow(report) {
             }
         </td>
         <td>${escapeHtml(report.source)}</td>
+        <td>
+            <span class="badge bg-secondary" title="Number of IOCs (excluding false positives)">${iocCount}</span>
+        </td>
         <td>${formattedDate}</td>
         <td class="action-buttons">
             ${

@@ -67,6 +67,31 @@ def hello():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+def count_iocs(row):
+    invalid_iocs = row["ai_invalid_iocs"] if row["ai_invalid_iocs"] else {}
+    irrelevant_iocs = row["ai_irrelevant_iocs"] if row["ai_irrelevant_iocs"] else {}
+
+    num_iocs = 0
+    # Handle the mitre JSON field - it's already loaded as a Python dict by psycopg2.extras.DictCursor
+    # but we need to ensure it's not None
+    if row["mitre"] is None:
+        row["mitre"] = {}
+
+    for values in row["mitre"].values():
+        num_iocs += len(values)
+
+    # Handle arrays - ensure they're returned as lists even if NULL in DB
+    array_fields = ["ipv4s", "ipv6s", "urls", "yara_rules", "cves", "sha256s", "md5s", "sha1s"]
+    for field in array_fields:
+        if row[field] is None:
+            row[field] = []
+
+        for ioc in row[field]:
+            if (ioc not in invalid_iocs) and (ioc not in irrelevant_iocs):
+                num_iocs += 1
+
+    return num_iocs
+
 @application.route("/v1/reports")
 def list_reports():
     try:
@@ -82,7 +107,23 @@ def list_reports():
     limit = request.args.get('limit', 10, type=int)
 
     query = """
-        SELECT id, title, source, publish_time, web_url
+        SELECT
+            id,
+            title,
+            source,
+            publish_time,
+            ipv4s,
+            ipv6s,
+            urls,
+            yara_rules,
+            cves,
+            sha256s,
+            md5s,
+            sha1s,
+            mitre,
+            web_url,
+            ai_invalid_iocs,
+            ai_irrelevant_iocs
         FROM report
         WHERE 1=1
     """
@@ -146,12 +187,14 @@ def list_reports():
                 rows = rows[:-1]
 
             for row in rows:
+                num_iocs = count_iocs(row)
                 results.append({
                     "id": row["id"],
                     "title": row["title"],
                     "publish_time": row["publish_time"].isoformat() if row["publish_time"] else None,
                     "source": row["source"],
                     "web_url": row["web_url"],
+                    "num_iocs": num_iocs,
                 })
 
             # Generate the next page token

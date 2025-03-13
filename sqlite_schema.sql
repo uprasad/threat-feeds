@@ -27,4 +27,13 @@ CREATE TABLE IF NOT EXISTS report (
 CREATE INDEX IF NOT EXISTS report_publish_time_idx ON report (publish_time);
 CREATE INDEX IF NOT EXISTS report_source_idx ON report (source);
 
+CREATE TABLE IF NOT EXISTS enriched_report (
+    report_id TEXT PRIMARY KEY,
+    cves TEXT, -- json
+    sha256s TEXT, -- json
+    md5s TEXT, -- json
+    sha1s TEXT, -- json
+    mitre TEXT -- json
+);
+
 COMMIT;

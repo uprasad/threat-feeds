@@ -67,6 +67,10 @@ def hello():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@application.route("/<string:report_id>")
+def report_details(report_id):
+    return render_template('report.html', report_id=report_id)
+
 def count_iocs(row):
     invalid_iocs = row["ai_invalid_iocs"] if row["ai_invalid_iocs"] else {}
     irrelevant_iocs = row["ai_irrelevant_iocs"] if row["ai_irrelevant_iocs"] else {}

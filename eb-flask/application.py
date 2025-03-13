@@ -382,7 +382,10 @@ def enrich_report(report_id):
     query = """
         SELECT
             report_id,
-            mitre
+            mitre,
+            md5s,
+            sha1s,
+            sha256s
         FROM enriched_report
         WHERE report_id = %s
     """
@@ -398,6 +401,15 @@ def enrich_report(report_id):
 
             if result["mitre"] is None:
                 result["mitre"] = {}
+            
+            if result["md5s"] is None:
+                result["md5s"] = {}
+
+            if result["sha1s"] is None:
+                result["sha1s"] = {}
+
+            if result["sha256s"] is None:
+                result["sha256s"] = {}
 
             return jsonify(result)
     except Exception as e:

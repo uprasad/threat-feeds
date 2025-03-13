@@ -240,6 +240,54 @@
   font-size: 0.8rem;
 }
 
+/* Vendor badge styling for hash enrichment links */
+.vendor-badge {
+  background-color: #0d6efd;
+  color: white !important; /* Force white text color */
+  font-size: 0.7rem;
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-weight: bold;
+  margin-left: 5px;
+  margin-right: 2px;
+  display: inline-block;
+  vertical-align: middle;
+  text-decoration: none !important; /* Prevent underline */
+}
+
+.vendor-badge:hover,
+.vendor-badge:focus,
+.vendor-badge:active {
+  background-color: #0a58ca;
+  color: white !important;
+  text-decoration: none !important;
+}
+
+/* Add different colors for different vendors */
+.vendor-badge[title*="VirusTotal"] {
+  background-color: #394eff;
+}
+
+.vendor-badge[title*="Hybrid-Analysis"] {
+  background-color: #00acc1;
+}
+
+.vendor-badge[title*="MalwareBazaar"] {
+  background-color: #8e24aa;
+}
+
+.vendor-badge[title*="AnyRun"] {
+  background-color: #43a047;
+}
+
+.vendor-badge[title*="ThreatBook"] {
+  background-color: #fb8c00;
+}
+
+.vendor-badge[title*="AlienVault"] {
+  background-color: #546e7a;
+}
+
 /* Add styles for the MITRE ATT&CK section */
 .mitre-section {
   margin-bottom: 2rem;

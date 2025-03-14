@@ -90,6 +90,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   })
 
+  // Configure marked.js options
+  marked.setOptions({
+    breaks: true, // Add line breaks on single line breaks
+    gfm: true, // Use GitHub Flavored Markdown
+    headerIds: true, // Add IDs to headers
+    sanitize: false, // Don't sanitize (we'll handle this ourselves)
+    smartLists: true, // Use smarter list behavior
+    smartypants: true, // Use "smart" typographic punctuation
+    xhtml: false, // Don't use XHTML
+  })
+
   // Initial load
   loadReports()
 })
@@ -261,7 +272,7 @@ function setSearchMode(mode) {
     searchTypeBtn.textContent = "Ask AI"
     searchInput.style.display = "none"
     aiQueryInput.style.display = "block"
-    searchInput.placeholder = "Ask a question about threat intelligence..."
+    aiQueryInput.placeholder = "Ask a question about threat intelligence..."
   } else {
     isAiMode = false
     searchTypeBtn.textContent = "Search"
@@ -378,8 +389,20 @@ function executeAiQuery(query) {
       showLoading(false)
       aiQueryInProgress = false
 
-      // Display the AI answer
-      aiAnswerContent.innerHTML = data.answer
+      // Display the AI answer with markdown rendering
+      // First check if the answer looks like markdown (contains # or * or links)
+      const hasMarkdown = /(#{1,6}\s+\w+)|(\*\*\w+\*\*)|(\*\w+\*)|(\[.+\]$$.+$$)/g.test(data.answer)
+
+      if (hasMarkdown) {
+        // Render as markdown
+        aiAnswerContent.innerHTML = marked.parse(data.answer)
+      } else {
+        // Render as plain text with paragraphs
+        aiAnswerContent.innerHTML = data.answer
+          .split("\n\n")
+          .map((paragraph) => `<p>${paragraph.replace(/\n/g, "<br>")}</p>`)
+          .join("")
+      }
 
       // Display the related reports
       if (data.reports && data.reports.length > 0) {

@@ -36,4 +36,9 @@ CREATE TABLE IF NOT EXISTS enriched_report (
     mitre TEXT -- json
 );
 
+CREATE TABLE IF NOT EXISTS pinecone_reports (
+    report_id TEXT PRIMARY_KEY,
+    pinecone_file_id TEXT
+);
+
 COMMIT;

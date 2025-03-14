@@ -22,7 +22,7 @@ industry.
    the Q&A feature.
 
 ## Architecture
-![threat-feeds-architecture](https://github.com/user-attachments/assets/f82c9dc7-fa8c-4633-ac3c-ffcd6215347b)
+![threat-feeds-architecture](threat-feeds-architecture.png)
 
 ## Scripts
 

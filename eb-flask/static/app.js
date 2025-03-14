@@ -3,6 +3,8 @@ let pageToken = null
 let isSearchMode = false
 let currentSearchQuery = ""
 let totalSearchResults = 0
+let isAiMode = false
+let aiQueryInProgress = false
 
 // DOM Elements
 const reportsList = document.getElementById("reportsList")
@@ -20,6 +22,11 @@ const noResultsMessage = document.getElementById("noResultsMessage")
 const reportWebUrl = document.getElementById("reportWebUrl")
 const copyToast = document.getElementById("copyToast")
 const searchResultsContainer = document.getElementById("searchResultsContainer")
+const searchTypeBtn = document.getElementById("searchTypeBtn")
+const searchTypeDropdown = document.getElementById("searchTypeDropdown")
+const aiQueryInput = document.getElementById("aiQueryInput")
+const aiAnswerContainer = document.getElementById("aiAnswerContainer")
+const aiAnswerContent = document.getElementById("aiAnswerContent")
 
 // Vendor abbreviations mapping
 const vendorAbbreviations = {
@@ -53,6 +60,35 @@ document.addEventListener("DOMContentLoaded", () => {
   applyFiltersBtn.addEventListener("click", applyFilters)
   clearFiltersBtn.addEventListener("click", clearFilters)
   clearFiltersHomeBtn.addEventListener("click", clearFilters)
+
+  // Set up search type dropdown
+  searchTypeDropdown.querySelectorAll(".dropdown-item").forEach((item) => {
+    item.addEventListener("click", (e) => {
+      e.preventDefault()
+      const searchType = e.target.getAttribute("data-search-type")
+      setSearchMode(searchType)
+
+      // Update active state in dropdown
+      searchTypeDropdown.querySelectorAll(".dropdown-item").forEach((i) => i.classList.remove("active"))
+      e.target.classList.add("active")
+    })
+  })
+
+  // Auto-resize textarea for AI queries
+  aiQueryInput.addEventListener("input", () => {
+    // Reset height to auto to get the correct scrollHeight
+    aiQueryInput.style.height = "auto"
+    // Set the height to the scrollHeight
+    aiQueryInput.style.height = aiQueryInput.scrollHeight + "px"
+  })
+
+  // Handle AI query submission with Enter key (but allow Shift+Enter for new lines)
+  aiQueryInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault()
+      handleSearch(e)
+    }
+  })
 
   // Initial load
   loadReports()
@@ -219,38 +255,153 @@ function loadMoreReports() {
   }
 }
 
+function setSearchMode(mode) {
+  if (mode === "ai") {
+    isAiMode = true
+    searchTypeBtn.textContent = "Ask AI"
+    searchInput.style.display = "none"
+    aiQueryInput.style.display = "block"
+    searchInput.placeholder = "Ask a question about threat intelligence..."
+  } else {
+    isAiMode = false
+    searchTypeBtn.textContent = "Search"
+    searchInput.style.display = "block"
+    aiQueryInput.style.display = "none"
+    searchInput.placeholder = "Search reports..."
+  }
+}
+
 function handleSearch(e) {
   e.preventDefault()
-  const query = searchInput.value.trim()
 
-  if (query) {
-    // Reset page token and clear feed for new search
-    pageToken = null
-    reportsList.innerHTML = ""
-    isSearchMode = true
-    currentSearchQuery = query
-    searchReports(query)
+  let query = ""
 
-    // Show the clear button when search is executed
-    clearFiltersHomeBtn.style.display = "inline-block"
-  } else {
-    // If search is empty, go back to regular reports feed
-    pageToken = null
-    reportsList.innerHTML = ""
-    isSearchMode = false
-    currentSearchQuery = ""
-    // Hide the search results count
-    searchResultsContainer.style.display = "none"
+  if (isAiMode) {
+    query = aiQueryInput.value.trim()
+    if (query) {
+      // Reset page token and clear feed for new AI query
+      pageToken = null
+      reportsList.innerHTML = ""
+      isSearchMode = false
+      currentSearchQuery = ""
 
-    // Only hide the clear button if there are no active filters
-    const filters = getFilters()
-    const hasActiveFilters = Object.values(filters).some((value) => value !== null)
-    if (!hasActiveFilters) {
-      clearFiltersHomeBtn.style.display = "none"
+      // Show the clear button
+      clearFiltersHomeBtn.style.display = "inline-block"
+
+      // Hide the search results count
+      searchResultsContainer.style.display = "none"
+
+      // Hide any previous AI answer
+      aiAnswerContainer.style.display = "none"
+
+      // Execute AI query
+      executeAiQuery(query)
     }
+  } else {
+    query = searchInput.value.trim()
 
-    loadReports(getFilters())
+    if (query) {
+      // Reset page token and clear feed for new search
+      pageToken = null
+      reportsList.innerHTML = ""
+      isSearchMode = true
+      currentSearchQuery = query
+
+      // Hide any previous AI answer
+      aiAnswerContainer.style.display = "none"
+
+      // Execute regular search
+      searchReports(query)
+
+      // Show the clear button when search is executed
+      clearFiltersHomeBtn.style.display = "inline-block"
+    } else {
+      // If search is empty, go back to regular reports feed
+      pageToken = null
+      reportsList.innerHTML = ""
+      isSearchMode = false
+      currentSearchQuery = ""
+
+      // Hide the search results count
+      searchResultsContainer.style.display = "none"
+
+      // Hide any previous AI answer
+      aiAnswerContainer.style.display = "none"
+
+      // Only hide the clear button if there are no active filters
+      const filters = getFilters()
+      const hasActiveFilters = Object.values(filters).some((value) => value !== null)
+      if (!hasActiveFilters) {
+        clearFiltersHomeBtn.style.display = "none"
+      }
+
+      loadReports(getFilters())
+    }
   }
+}
+
+function executeAiQuery(query) {
+  if (aiQueryInProgress) return
+
+  aiQueryInProgress = true
+  showLoading(true)
+  showNoResults(false)
+
+  // Show AI answer container with loading state
+  aiAnswerContainer.style.display = "block"
+  aiAnswerContent.innerHTML = `
+    <div class="ai-loading">
+      <span>Thinking</span>
+      <div class="dots">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    </div>
+  `
+
+  // Create form data for the POST request
+  const formData = new FormData()
+  formData.append("query", query)
+
+  fetch("/v1/reports/qanda", {
+    method: "POST",
+    body: formData,
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`)
+      }
+      return response.json()
+    })
+    .then((data) => {
+      showLoading(false)
+      aiQueryInProgress = false
+
+      // Display the AI answer
+      aiAnswerContent.innerHTML = data.answer
+
+      // Display the related reports
+      if (data.reports && data.reports.length > 0) {
+        renderReports(data.reports, true)
+        loadMoreBtn.style.display = "none" // No pagination for AI results
+      } else {
+        showNoResults(true)
+      }
+    })
+    .catch((error) => {
+      console.error("Error executing AI query:", error)
+      showLoading(false)
+      aiQueryInProgress = false
+
+      aiAnswerContent.innerHTML = `
+        <div class="alert alert-danger">
+          Failed to get an answer. Please try again later or rephrase your question.
+        </div>
+      `
+
+      showNoResults(true)
+    })
 }
 
 function searchReports(query, isLoadMore = false) {
@@ -411,6 +562,12 @@ function clearFilters() {
   // Reset the form
   filtersForm.reset()
 
+  // Reset AI query input if in AI mode
+  if (isAiMode) {
+    aiQueryInput.value = ""
+    aiQueryInput.style.height = "38px" // Reset height
+  }
+
   // Also clear the search if in search mode
   if (isSearchMode) {
     searchInput.value = ""
@@ -418,6 +575,9 @@ function clearFilters() {
     currentSearchQuery = ""
     searchResultsContainer.style.display = "none"
   }
+
+  // Hide the AI answer container
+  aiAnswerContainer.style.display = "none"
 
   // Hide the clear button
   clearFiltersHomeBtn.style.display = "none"

@@ -21,8 +21,16 @@
             <div class="col-md-8 mb-3 mb-md-0">
                 <form id="searchForm" class="d-flex">
                     <div class="input-group">
+                        <div class="input-group-prepend">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" id="searchTypeBtn">Search</button>
+                            <ul class="dropdown-menu" id="searchTypeDropdown">
+                                <li><a class="dropdown-item active" href="#" data-search-type="regular">Search</a></li>
+                                <li><a class="dropdown-item" href="#" data-search-type="ai">Ask AI</a></li>
+                            </ul>
+                        </div>
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="search" id="searchInput" class="form-control" placeholder="Search reports...">
+                        <textarea id="aiQueryInput" class="form-control" placeholder="Ask a question about threat intelligence..." style="display: none; resize: none; overflow: hidden;"></textarea>
                     </div>
                 </form>
             </div>
@@ -45,6 +53,21 @@
         <!-- Search Results Count -->
         <div id="searchResultsContainer" class="alert alert-info mb-4" style="display: none;">
             Found <strong id="totalResultsCount">0</strong> results matching your search
+        </div>
+
+        <!-- AI Answer Section -->
+        <div id="aiAnswerContainer" class="mb-4" style="display: none;">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-robot"></i> AI Answer
+                </div>
+                <div class="card-body">
+                    <div id="aiAnswerContent"></div>
+                    <div class="mt-3 small text-muted">
+                        <i class="bi bi-info-circle"></i> Answer generated based on the reports below
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Loading Indicator -->

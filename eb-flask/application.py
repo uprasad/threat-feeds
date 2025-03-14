@@ -8,6 +8,8 @@ from flask import Flask, request, jsonify
 from flask import render_template
 import json
 import os
+from pinecone import Pinecone
+from pinecone_plugins.assistant.models.chat import Message
 import psycopg2 as pg
 import psycopg2.extras as pg_extras
 from whoosh import index
@@ -49,6 +51,30 @@ def get_pg_secret():
         raise e
 
     return json.loads(get_secret_value_response['SecretString'])
+
+def get_threat_feeds_secret():
+    secret_name = "threat-feeds-secrets"
+    region_name = "us-east-2"
+
+    # Create a Secrets Manager client
+    session = boto3.session.Session()
+    client = session.client(
+        service_name='secretsmanager',
+        region_name=region_name
+    )
+
+    try:
+        get_secret_value_response = client.get_secret_value(
+            SecretId=secret_name
+        )
+    except ClientError as e:
+        # For a list of exceptions thrown, see
+        # https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_GetSecretValue.html
+        raise e
+
+    secret = get_secret_value_response['SecretString']
+
+    return json.loads(secret)
 
 def create_pg_conn():
     pg_secret = get_pg_secret()
@@ -386,6 +412,92 @@ def search_reports():
         response["next_page_token"] = base64.b64encode(str(pagenum+1).encode()).decode()
 
     return jsonify(response)
+
+
+@application.route("/v1/reports/qanda", methods=["POST"])
+def qanda():
+    try:
+        pinecone_api_key = get_threat_feeds_secret()['pinecone-api-key']
+        pc = Pinecone(api_key=pinecone_api_key)
+        assistant = pc.assistant.Assistant(assistant_name="threat-feeds-assistant")
+    except:
+        return jsonify({"error": "error connecting to service"}), 503
+
+    try:
+        pg_conn = create_pg_conn()
+    except Exception as e:
+        return jsonify({"error": "error connecting to database"}), 503
+
+    query = request.form.get('query')
+    if not query:
+        return jsonify({"error": "'query' is required"}), 400
+
+    response = {
+    }
+    reports = []
+    try:
+        msg = Message(role="user", content=query)
+        chat_resp = assistant.chat(messages=[msg], include_highlights=True)
+
+        answer = chat_resp.message.content
+        response["answer"] = answer
+
+        report_highlights = defaultdict(list)
+        for cit in chat_resp.citations:
+            for ref in cit.references:
+                # Each citation contains only one file, so break after the
+                # first snippet.
+                report_id = ref.file.metadata["report_id"]
+                highlight = ref.highlight.content
+                
+                report_highlights[report_id].append(highlight)
+
+        with pg_conn.cursor(cursor_factory=pg_extras.DictCursor) as pg_cur:
+            for report_id, highlights in report_highlights.items():
+                pg_cur.execute("""
+                    SELECT
+                        id,
+                        title,
+                        source,
+                        publish_time,
+                        ipv4s,
+                        ipv6s,
+                        urls,
+                        yara_rules,
+                        cves,
+                        sha256s,
+                        md5s,
+                        sha1s,
+                        mitre,
+                        web_url,
+                        ai_invalid_iocs,
+                        ai_irrelevant_iocs
+                    FROM report
+                    WHERE id = %s
+                """, (report_id,))
+                row = pg_cur.fetchone()
+
+                if not row:
+                    return jsonify({"error": f"could not find record {report_id}"}), 503
+
+                num_iocs = count_iocs(row)
+
+                reports.append({
+                    "id": row["id"],
+                    "title": row["title"],
+                    "publish_time": row["publish_time"].isoformat() if row["publish_time"] else None,
+                    "source": row["source"],
+                    "web_url": row["web_url"],
+                    "highlights": "\n...\n".join(highlights),
+                    "num_iocs": num_iocs,
+                })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    response["reports"] = reports
+
+    return jsonify(response)
+
 
 @application.route("/v1/reports/related/<string:report_id>")
 def related_reports(report_id):

@@ -336,7 +336,23 @@ def search_reports():
                 highlights = hit.highlights("content")
 
                 pg_cur.execute("""
-                    SELECT id, title, source, publish_time, web_url
+                    SELECT
+                        id,
+                        title,
+                        source,
+                        publish_time,
+                        ipv4s,
+                        ipv6s,
+                        urls,
+                        yara_rules,
+                        cves,
+                        sha256s,
+                        md5s,
+                        sha1s,
+                        mitre,
+                        web_url,
+                        ai_invalid_iocs,
+                        ai_irrelevant_iocs
                     FROM report
                     WHERE id = %s
                 """, (report_id,))
@@ -345,6 +361,8 @@ def search_reports():
                 if not row:
                     return jsonify({"error": f"could not find record {report_id}"}), 503
 
+                num_iocs = count_iocs(row)
+
                 reports.append({
                     "id": row["id"],
                     "title": row["title"],
@@ -352,6 +370,7 @@ def search_reports():
                     "source": row["source"],
                     "web_url": row["web_url"],
                     "highlights": highlights,
+                    "num_iocs": num_iocs,
                 })
 
     except Exception as e:
